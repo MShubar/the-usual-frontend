@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
-// import Buttons from '../components/Buttons'
+import Buttons from '../components/Buttons'
 import Logo from '../assets/background.jpg'
 import ItemCard from '../components/ItemCard'
-// import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import { API_BACKEND } from './API'
 function HomePage() {
@@ -15,7 +15,7 @@ function HomePage() {
   const [items, setItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
 
-  // const navigate = useNavigate()
+  const navigate = useNavigate()
 
   // Fetch main categories
   useEffect(() => {
@@ -275,12 +275,12 @@ const ItemsContainer = styled.div`
   gap: 20px;
 `
 
-// const FloatingCheckout = styled.div`
-//   position: fixed;
-//   bottom: 20px;
-//   right: 20px;
-//   z-index: 100;
-// `
+const FloatingCheckout = styled.div`
+  position: fixed;
+   bottom: 20px;
+   right: 20px;
+   z-index: 100;
+`
 const SearchContainer = styled.div`
   margin: 16px;
 `
