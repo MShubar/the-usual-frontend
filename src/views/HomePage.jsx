@@ -6,7 +6,7 @@ import Logo from '../assets/background.jpg'
 import ItemCard from '../components/ItemCard'
 // import { useNavigate } from 'react-router-dom'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
-
+import { API_BACKEND } from './API'
 function HomePage() {
   const [categories, setCategories] = useState([])
   const [mainCategory, setMainCategory] = useState('')
@@ -20,7 +20,7 @@ function HomePage() {
   // Fetch main categories
   useEffect(() => {
     axios
-      .get('http://localhost:5000/categories')
+      .get(`${API_BACKEND}/categories`)
       .then((res) => {
         setCategories(res.data)
         if (res.data.length > 0) {
@@ -34,7 +34,7 @@ function HomePage() {
   useEffect(() => {
     if (!mainCategory) return
     axios
-      .get(`http://localhost:5000/categories/${mainCategory}/sub`)
+      .get(`${API_BACKEND}/categories/${mainCategory}/sub`)
       .then((res) => setSubCategories(res.data))
       .catch((err) => console.error(err))
   }, [mainCategory])
@@ -44,7 +44,7 @@ function HomePage() {
     if (!mainCategory || !selectedSubCategory) return
     axios
       .get(
-        `http://localhost:5000/categories/${mainCategory}/${selectedSubCategory}/items`
+        `${API_BACKEND}/categories/${mainCategory}/${selectedSubCategory}/items`
       )
       .then((res) => setItems(res.data))
       .catch((err) => console.error(err))

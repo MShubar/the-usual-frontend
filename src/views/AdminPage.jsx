@@ -15,8 +15,9 @@ import {
   Divider
 } from '@mui/material'
 import { styled } from '@mui/system'
+import { API_BACKEND } from './API'
 
-const API = (path) => `http://localhost:5000${path}`
+const API = (path) => `${API_BACKEND}${path}`
 const Box = styled(Paper)({ padding: 16, borderRadius: 12 })
 
 export default function AdminPage() {
