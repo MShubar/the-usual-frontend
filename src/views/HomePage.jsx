@@ -166,7 +166,6 @@ function HomePage() {
             </>
           )}
 
-          {/* Floating Checkout
           <FloatingCheckout>
             <Buttons
               type="checkout"
@@ -175,7 +174,7 @@ function HomePage() {
             >
               Checkout
             </Buttons>
-          </FloatingCheckout> */}
+          </FloatingCheckout> 
         </PageContainer>
       </PageWrapper>
     </>
