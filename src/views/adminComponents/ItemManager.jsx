@@ -31,16 +31,12 @@ const Mixers = Object.freeze({
 export function ItemManager() {
   const [categories, setCategories] = useState([])
   const [subcategories, setSubcategories] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCategory] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
   const [items, setItems] = useState([])
-  const [newItem, setNewItem] = useState('')
-  const [image, setImage] = useState(null)
 
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedMilk, setSelectedMilk] = useState('')
-  const [selectedShot, setSelectedShot] = useState('')
-  const [selectedMixer, setSelectedMixer] = useState('')
 
   // test logging
   useEffect(() => {

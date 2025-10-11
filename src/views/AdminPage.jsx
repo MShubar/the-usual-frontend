@@ -101,6 +101,7 @@ export default function AdminPage() {
     const r = await fetch(API(`/categories/${encodeURIComponent(catName)}/sub`))
     setSubs(await r.json())
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   async function loadItems(catName, subId) {
     if (!catName || !subId) return setItems([])
     const sub = subs.find((s) => String(s.id) === String(subId))
@@ -125,7 +126,7 @@ export default function AdminPage() {
   }, [selectedCatName])
   useEffect(() => {
     loadItems(selectedCatName, selectedSubId)
-  }, [selectedSubId])
+  }, [loadItems, selectedCatName, selectedSubId])
 
   // --- HELPERS
   const selectedCatAdmin = useMemo(
