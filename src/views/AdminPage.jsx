@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Container,
   Grid,
@@ -61,6 +61,7 @@ export default function AdminPage() {
   async function loadEnums() {
     const r = await fetch(API('/products/enums'))
     const data = await r.json()
+    
 
     // Ensure all enum fields are arrays
     const normalized = {}
@@ -101,8 +102,7 @@ export default function AdminPage() {
     const r = await fetch(API(`/categories/${encodeURIComponent(catName)}/sub`))
     setSubs(await r.json())
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  async function loadItems(catName, subId) {
+  const loadItems = useCallback(async (catName, subId) => {
     if (!catName || !subId) return setItems([])
     const sub = subs.find((s) => String(s.id) === String(subId))
     if (!sub) return
@@ -114,7 +114,7 @@ export default function AdminPage() {
       )
     )
     setItems(await r.json())
-  }
+  }, [subs])
 
   useEffect(() => {
     loadPublicCategories()
@@ -139,7 +139,7 @@ export default function AdminPage() {
     if (!catForm.name) return alert('Category name required')
     const fd = new FormData()
     fd.append('name', catForm.name)
-    if (catForm.imageFile) fd.append('image', catForm.imageFile)
+    if (catForm.imageFile) fd.append('file', catForm.imageFile)  // Changed from 'image' to 'file'
     const method = catForm.id ? 'PUT' : 'POST'
     const url = catForm.id
       ? API(`/admin/categories/${catForm.id}`)
@@ -244,7 +244,7 @@ export default function AdminPage() {
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6">Categories</Typography>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={4}>
+          <Grid item>
             <Select
               fullWidth
               displayEmpty
@@ -254,12 +254,12 @@ export default function AdminPage() {
               <MenuItem value="">Select category</MenuItem>
               {catNames.map((n) => (
                 <MenuItem key={n} value={n}>
-                  {n}
+                  {String(n)}
                 </MenuItem>
               ))}
             </Select>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item>
             <TextField
               fullWidth
               label="Name"
@@ -269,7 +269,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <Button component="label" fullWidth variant="outlined">
               {catForm.imageFile ? catForm.imageFile.name : 'Image'}
               <input
@@ -285,7 +285,7 @@ export default function AdminPage() {
               />
             </Button>
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <Button fullWidth variant="contained" onClick={saveCategory}>
               {catForm.id ? 'Save' : 'Create'}
             </Button>
@@ -328,7 +328,7 @@ export default function AdminPage() {
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6">Subcategories</Typography>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={4}>
+          <Grid item>
             <Select
               fullWidth
               displayEmpty
@@ -343,7 +343,7 @@ export default function AdminPage() {
               ))}
             </Select>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item>
             <TextField
               fullWidth
               label="Name"
@@ -353,7 +353,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <Button component="label" fullWidth variant="outlined">
               {subForm.imageFile ? subForm.imageFile.name : 'Image'}
               <input
@@ -369,7 +369,7 @@ export default function AdminPage() {
               />
             </Button>
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <Button fullWidth variant="contained" onClick={saveSub}>
               {subForm.id ? 'Save' : 'Create'}
             </Button>
@@ -416,7 +416,7 @@ export default function AdminPage() {
       <Box>
         <Typography variant="h6">Items</Typography>
         <Grid container spacing={2}>
-          <Grid item xs={3}>
+          <Grid item>
             <TextField
               label="Name"
               fullWidth
@@ -426,7 +426,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={3}>
+          <Grid item>
             <TextField
               label="Description"
               fullWidth
@@ -436,7 +436,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <TextField
               label="Serves"
               fullWidth
@@ -446,7 +446,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <TextField
               label="Price"
               type="number"
@@ -457,7 +457,7 @@ export default function AdminPage() {
               }
             />
           </Grid>
-          <Grid item xs={2}>
+          <Grid item>
             <Button component="label" fullWidth variant="outlined">
               {itemForm.imageFile ? itemForm.imageFile.name : 'Image'}
               <input
@@ -475,7 +475,7 @@ export default function AdminPage() {
           </Grid>
           {/* ENUM SELECTS */}
           {Object.entries(enums).map(([key, options]) => (
-            <Grid item xs={3} key={key}>
+            <Grid item key={key}>
               <Select
                 multiple
                 fullWidth
@@ -486,14 +486,14 @@ export default function AdminPage() {
               >
                 {options.map((opt) => (
                   <MenuItem key={opt} value={opt}>
-                    {opt}
+                    {String(opt)}
                   </MenuItem>
                 ))}
               </Select>
             </Grid>
           ))}
 
-          <Grid item xs={12}>
+          <Grid item>
             <Button
               variant="contained"
               onClick={saveItem}
@@ -506,7 +506,7 @@ export default function AdminPage() {
 
         <Grid container spacing={2} sx={{ mt: 2 }}>
           {items.map((it) => (
-            <Grid item xs={12} sm={6} md={4} key={it.id}>
+            <Grid xs={12} sm={6} md={4} key={it.id}>
               <Card>
                 {it.image && (
                   <CardMedia

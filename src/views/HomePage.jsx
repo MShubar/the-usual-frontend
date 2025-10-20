@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
 import Buttons from '../components/Buttons'
@@ -6,60 +6,163 @@ import Logo from '../assets/background.jpg'
 import ItemCard from '../components/ItemCard'
 import { useNavigate } from 'react-router-dom'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import { API_BACKEND } from './API'
+import Loading from '../components/Loading'
+import SkeletonCard from '../components/SkeletonCard'
+import ErrorMessage from '../components/ErrorMessage'
+import NotFound from '../components/NotFound'
+import UnderMaintenance from '../components/UnderMaintenance'
+
 function HomePage() {
   const [categories, setCategories] = useState([])
-  const [mainCategory, setMainCategory] = useState('')
+  const [mainCategory, setMainCategory] = useState("")
   const [subCategories, setSubCategories] = useState([])
   const [selectedSubCategory, setSelectedSubCategory] = useState(null)
   const [items, setItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('cart')
+      return savedCart ? JSON.parse(savedCart) : []
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error)
+      return []
+    }
+  }) // Initialize cart from localStorage
 
   const navigate = useNavigate()
 
-  // Fetch main categories
-  useEffect(() => {
-    axios
-      .get(`${API_BACKEND}/categories`)
+  const [loadingCategories, setLoadingCategories] = useState(false)
+  const [loadingItems, setLoadingItems] = useState(false)
+  const [error, setError] = useState(null)
+  const [maintenance] = useState(false)
+
+  const pageContainerRef = useRef(null)
+  const lastScrollTop = useRef(0)
+
+  const fetchCategories = () => {
+    setError(null)
+    setLoadingCategories(true)
+    axios.get(`${API_BACKEND}/categories`)
       .then((res) => {
         setCategories(res.data)
         if (res.data.length > 0) {
           setMainCategory(res.data[0])
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => setError(err?.message || 'Failed to load categories'))
+      .finally(() => setLoadingCategories(false))
+  }
+
+  useEffect(() => {
+    fetchCategories()
   }, [])
 
-  // Fetch subcategories when mainCategory changes
   useEffect(() => {
     if (!mainCategory) return
     axios
-      .get(`${API_BACKEND}/categories/${mainCategory}/sub`)
+      .get(`${API_BACKEND}/categories/${mainCategory.id}/sub`)
       .then((res) => setSubCategories(res.data))
-      .catch((err) => console.error(err))
+      .catch((err) => setError(err?.message || 'Failed to load subcategories'))
   }, [mainCategory])
 
-  // Fetch items when subCategory is selected
   useEffect(() => {
     if (!mainCategory || !selectedSubCategory) return
+    setError(null)
+    setLoadingItems(true)
     axios
       .get(
-        `${API_BACKEND}/categories/${mainCategory}/${selectedSubCategory}/items`
+        `${API_BACKEND}/categories/${mainCategory.id}/${selectedSubCategory}/items`
       )
       .then((res) => setItems(res.data))
-      .catch((err) => console.error(err))
+      .catch((err) => setError(err?.message || 'Failed to load items'))
+      .finally(() => setLoadingItems(false))
   }, [mainCategory, selectedSubCategory])
+
+  // Add scroll-to-refresh effect
+  useEffect(() => {
+    const container = pageContainerRef.current
+    if (!container) return
+
+    let ticking = false
+    function onScroll() {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = container.scrollTop
+          // If user scrolled up to top (with a small threshold)
+          if (scrollTop <= 0 && lastScrollTop.current > 10) {
+            fetchCategories()
+          }
+          lastScrollTop.current = scrollTop
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+    container.addEventListener('scroll', onScroll)
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0)
+  }
+
+  const getTotalPrice = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+  }
+
+  const addToCart = (item) => {
+    setCart(prevCart => {
+      // Create a unique identifier for items with different customizations
+      const itemKey = `${item.id}-${item.size || ''}-${item.milk || ''}-${item.shots || ''}-${item.mixer || ''}`;
+      
+      const existingItem = prevCart.find(cartItem => {
+        const cartItemKey = `${cartItem.id}-${cartItem.size || ''}-${cartItem.milk || ''}-${cartItem.shots || ''}-${cartItem.mixer || ''}`;
+        return cartItemKey === itemKey;
+      });
+
+      if (existingItem) {
+        const newCart = prevCart.map(cartItem => {
+          const cartItemKey = `${cartItem.id}-${cartItem.size || ''}-${cartItem.milk || ''}-${cartItem.shots || ''}-${cartItem.mixer || ''}`;
+          return cartItemKey === itemKey
+            ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+            : cartItem;
+        });
+        return newCart;
+      } else {
+        const newCart = [...prevCart, { ...item }];
+        return newCart;
+      }
+    });
+  };
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('cart', JSON.stringify(cart))
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error)
+    }
+  }, [cart])
+
+  if (maintenance) {
+    return <UnderMaintenance message="Site is under maintenance. Please check back soon." />
+  }
 
   return (
     <>
       <PageWrapper>
         {selectedSubCategory && (
-          <BackButton onClick={() => setSelectedSubCategory(null)}>
+          <BackButton onClick={() => {
+            setSelectedSubCategory(null)
+            setSearchQuery('') // clear search bar on back
+          }}>
             ← Back
           </BackButton>
         )}
         <BackgroundImage />
-        <PageContainer>
+        <PageContainer ref={pageContainerRef}>
           <div style={{ gap: '10px' }}>
             <Title>The Usual</Title>
             <Location>
@@ -68,21 +171,42 @@ function HomePage() {
             </Location>
           </div>
 
-          {/* Category Buttons */}
-          <FilterRow>
-            {categories.map((cat) => (
-              <FilterButton
-                key={cat}
-                active={cat === mainCategory}
-                onClick={() => {
-                  setMainCategory(cat)
-                  setSelectedSubCategory(null)
-                  setItems([])
+          {error && (
+            <div style={{ margin: 16 }}>
+              <ErrorMessage
+                title="Load error"
+                message={error}
+                onRetry={() => {
+                  if (!categories.length) fetchCategories()
+                  if (selectedSubCategory) {
+                    setSelectedSubCategory(selectedSubCategory)
+                  }
                 }}
-              >
-                {cat}
-              </FilterButton>
-            ))}
+              />
+            </div>
+          )}
+
+          <FilterRow>
+            {loadingCategories ? (
+              <SkeletonCard count={4} variant="item" />
+            ) : categories.length === 0 ? (
+              <NotFound title="No categories" message="No categories available." />
+            ) : (
+              categories.map((cat) => (
+                <FilterButton
+                  key={cat.id}
+                  $active={cat.id === mainCategory?.id}
+                  onClick={() => {
+                    const selectedCat = categories.find(c => c.id === cat.id)
+                    setMainCategory(selectedCat)
+                    setSelectedSubCategory(null)
+                    setItems([])
+                  }}
+                >
+                  {cat.name}
+                </FilterButton>
+              ))
+            )}
           </FilterRow>
 
           <SearchContainer>
@@ -94,88 +218,119 @@ function HomePage() {
             />
           </SearchContainer>
 
-          {/* Show subcategories */}
           {!selectedSubCategory && (
             <CardList>
-              {subCategories
-                .filter((subCat) =>
-                  subCat.name.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .map((subCat) => (
-                  <CategoryCard
-                    key={subCat.id}
-                    onClick={() => setSelectedSubCategory(subCat.name)}
-                    style={{
-                      backgroundImage: `url(${subCat.image})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    <Overlay />
-                    <CategoryName>{subCat.name}</CategoryName>
-                  </CategoryCard>
-                ))}
+              {subCategories.length === 0 && loadingCategories ? (
+                <SkeletonCard count={3} variant="subcategory" fullWidth />
+              ) : subCategories.length === 0 ? (
+                <NotFound title="No subcategories" message="No subcategories found." />
+              ) : (
+                subCategories
+                  .filter((subCat) =>
+                    subCat.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((subCat) => (
+                    <CategoryCard
+                      key={subCat.id}
+                      onClick={() => {
+                        setSelectedSubCategory(subCat.name)
+                        setSearchQuery('') // clear search bar on subcategory select
+                      }}
+                      style={{
+                        backgroundImage: `url(${subCat.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }}
+                    >
+                      <Overlay />
+                      <CategoryName>{subCat.name}</CategoryName>
+                    </CategoryCard>
+                  ))
+              )}
             </CardList>
           )}
 
-          {/* Show items */}
           {selectedSubCategory && (
             <>
               <h1>{selectedSubCategory}</h1>
               <ItemsContainer>
-                {items.length > 0 ? (
-                  items.map((item) => {
-                    const formatArray = (val) => {
-                      if (!val) return []
-                      if (Array.isArray(val)) return val // already an array
-                      if (typeof val === 'string')
-                        return val.replace(/[{}]/g, '').split(',') // string like "{Small,Medium}"
-                      return [] // fallback
-                    }
-
-                    const formattedItem = {
-                      ...item,
-                      options: {
-                        sizes: formatArray(item.sizes),
-                        milk: formatArray(item.milks),
-                        shots: formatArray(item.shots),
-                        mixer: formatArray(item.mixers)
-                      }
-                    }
-
-                    console.log('Item Options:', formattedItem.options) // verify
-
-                    return (
-                      <ItemCard
-                        key={item.id}
-                        id={item.id}
-                        name={item.name}
-                        description={item.description}
-                        serves={item.serves}
-                        price={item.price}
-                        image={item.image}
-                        cat={selectedSubCategory}
-                        options={formattedItem.options}
-                      />
+                {loadingItems ? (
+                  <SkeletonCard count={6} variant="item" />
+                ) : items.length > 0 ? (
+                  items
+                    .filter(item =>
+                      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                  })
+                    .map((item) => {
+                      const formatArray = (val) => {
+                        if (!val) return []
+                        if (Array.isArray(val)) {
+                          if (val.length > 0 && typeof val[0] === 'object' && val[0] !== null && 'value' in val[0]) {
+                            return val
+                          }
+                          return val
+                        }
+                        if (typeof val === 'string')
+                          return val.replace(/[{}]/g, '').split(',')
+                        return []
+                      }
+
+                      const formattedItem = {
+                        ...item,
+                        options: {
+                          sizes: formatArray(item.sizes),
+                          milk: formatArray(item.milks),
+                          shots: formatArray(item.shots),
+                          mixer: formatArray(item.mixers)
+                        }
+                      }
+
+                      return (
+                        <ItemCard
+                          key={item.id}
+                          id={item.id}
+                          name={item.name}
+                          description={item.description}
+                          serves={item.serves}
+                          price={item.price}
+                          image={item.image}
+                          cat={selectedSubCategory}
+                          options={formattedItem.options}
+                          onAddToCart={addToCart}
+                        />
+                      )
+                    })
                 ) : (
-                  <p>No items available for this category.</p>
+                  <NotFound title="No items" message="No items available for this category." />
                 )}
               </ItemsContainer>
             </>
           )}
-
-          <FloatingCheckout>
-            <Buttons
-              type="checkout"
-              width="100%"
-              onClick={() => navigate('/checkout')}
-            >
-              Checkout
-            </Buttons>
-          </FloatingCheckout> 
         </PageContainer>
+
+        {/* Change back to conditional rendering */}
+        {cart.length > 0 && (
+          <FloatingCheckout>
+            <CheckoutButton 
+              onClick={() => navigate('/checkout')}
+              className="checkout-pulse"
+            >
+              <CheckoutContent>
+                <CartIconWrapper>
+                  <ShoppingCartIcon />
+                  {getTotalItems() > 0 && (
+                    <CartBadge>{getTotalItems()}</CartBadge>
+                  )}
+                </CartIconWrapper>
+                <CheckoutText>
+                  <CheckoutLabel>Checkout</CheckoutLabel>
+                  <CheckoutPrice>{getTotalPrice().toFixed(2)}BD</CheckoutPrice>
+                </CheckoutText>
+              </CheckoutContent>
+            </CheckoutButton>
+          </FloatingCheckout>
+        )}
       </PageWrapper>
     </>
   )
@@ -183,7 +338,6 @@ function HomePage() {
 
 export default HomePage
 
-// Styled Components
 const PageContainer = styled.div`
   position: relative;
   padding: 10px;
@@ -215,8 +369,8 @@ const FilterRow = styled.div`
 `
 
 const FilterButton = styled.button`
-  background-color: ${({ active }) => (active ? '#fff' : 'transparent')};
-  color: ${({ active }) => (active ? '#000' : '#fff')};
+  background-color: ${({ $active }) => ($active ? '#fff' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#000' : '#fff')};
   border: 3px solid #fff;
   border-radius: 20px;
   padding: 6px 14px;
@@ -277,10 +431,101 @@ const ItemsContainer = styled.div`
 
 const FloatingCheckout = styled.div`
   position: fixed;
-   bottom: 20px;
-   right: 20px;
-   z-index: 100;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+
+  .checkout-pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+    }
+  }
 `
+
+const CheckoutButton = styled.button`
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  border: none;
+  border-radius: 25px;
+  padding: 16px 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
+  transition: all 0.3s ease;
+  min-width: 140px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 152, 0, 0.4);
+    background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`
+
+const CheckoutContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+`
+
+const CartIconWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  svg {
+    font-size: 24px;
+  }
+`
+
+const CartBadge = styled.div`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #d32f2f;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+`
+
+const CheckoutText = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`
+
+const CheckoutLabel = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+`
+
+const CheckoutPrice = styled.span`
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  margin-top: 2px;
+`
+
 const SearchContainer = styled.div`
   margin: 16px;
 `
@@ -303,11 +548,12 @@ const SearchInput = styled.input`
     border: 2px solid #ff9800;
   }
 `
+
 const BackButton = styled.button`
-  position: absolute;
+  position: fixed;
   top: 16px;
   left: 16px;
-  z-index: 2; // above background
+  z-index: 1000;
   background: rgba(0, 0, 0, 0.5);
   color: white;
   border: none;

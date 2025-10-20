@@ -2,31 +2,6 @@ import { useEffect, useState } from 'react'
 
 const API_BASE_URL = 'http://localhost:5000'
 
-// enums
-const Sizes = Object.freeze({
-  SMALL: 'Small',
-  MEDIUM: 'Medium',
-  LARGE: 'Large'
-})
-
-const Milks = Object.freeze({
-  WHOLE: 'Whole',
-  SKIM: 'Skim',
-  SOY: 'Soy',
-  ALMOND: 'Almond'
-})
-
-const Shots = Object.freeze({
-  SINGLE: 'Single',
-  DOUBLE: 'Double',
-  TRIPLE: 'Triple'
-})
-
-const Mixers = Object.freeze({
-  VANILLA: 'Vanilla',
-  CARAMEL: 'Caramel',
-  HAZELNUT: 'Hazelnut'
-})
 
 export function ItemManager() {
   const [categories, setCategories] = useState([])
@@ -44,10 +19,6 @@ export function ItemManager() {
     console.log('Subcategories:', subcategories)
     console.log('Items:', items)
 
-    console.log('Enums -> Sizes:', Object.values(Sizes))
-    console.log('Enums -> Milks:', Object.values(Milks))
-    console.log('Enums -> Shots:', Object.values(Shots))
-    console.log('Enums -> Mixers:', Object.values(Mixers))
   }, [categories, subcategories, items])
 
   // fetchers
