@@ -15,7 +15,7 @@ import SoyImg from '../assets/options/Soy.jpg'
 import ThreeShotImg from '../assets/options/ThreeShot.png'
 import TwoShotImg from '../assets/options/TwoShot.png'
 import XLImg from '../assets/options/XL.jpg'
-import Sprite from '../assets/options/Sprite.jpeg'
+import Sprite from '../assets/options/Sprite.png'
 import Redbull from '../assets/options/Redbull.png'
 
 const optionImages = {
