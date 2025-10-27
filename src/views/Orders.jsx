@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import ReceiptIcon from '@mui/icons-material/Receipt'
@@ -6,66 +6,88 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import StorefrontIcon from '@mui/icons-material/Storefront'
+import MenuIcon from '@mui/icons-material/Menu'
+import DrawerMenu from '../components/DrawerMenu'
+import { API_BACKEND } from './API'
+import { cacheManager } from '../utils/cache'
 
 function Orders() {
   const navigate = useNavigate()
-  
-  // Sample order data - in real app this would come from API
-  const [orders] = useState([
-    {
-      id: '#8372',
-      date: 'Today, 2:30 PM',
-      status: 'Ready for Pickup',
-      type: 'pickup',
-      total: 12.50,
-      items: ['Spanish Latte', 'Croissant'],
-      location: 'The Usual Coffee Shop'
-    },
-    {
-      id: '#8371',
-      date: 'Yesterday, 10:15 AM',
-      status: 'Completed',
-      type: 'delivery',
-      total: 8.75,
-      items: ['Americano', 'Muffin'],
-      location: 'Building 123, Road 456'
-    },
-    {
-      id: '#8370',
-      date: 'Oct 18, 4:20 PM',
-      status: 'Completed',
-      type: 'pickup',
-      total: 15.20,
-      items: ['Cappuccino', 'Sandwich', 'Cookie'],
-      location: 'The Usual Coffee Shop'
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const fetchOrders = async () => {
+    setLoading(true)
+    setError(null)
+
+    // Check cache first
+    const cached = cacheManager.get('orders')
+    if (cached) {
+      console.log('Using cached orders')
+      setOrders(cached)
+      setLoading(false)
+      return
     }
-  ])
+
+    // Fetch from API
+    const startTime = performance.now()
+    try {
+      const response = await fetch(`${API_BACKEND}/orders`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      const duration = performance.now() - startTime
+      console.log(`Orders API took ${duration.toFixed(2)}ms`)
+      
+      cacheManager.set('orders', data)
+      setOrders(data)
+    } catch (err) {
+      console.error('Error fetching orders:', err)
+      setError(err.message || 'Failed to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Ready for Pickup': return '#4CAF50'
-      case 'In Progress': return '#ff9800'
-      case 'Completed': return '#888'
+      case 'ready': return '#4CAF50'
+      case 'preparing': return '#ff9800'
+      case 'completed': return '#888'
       default: return '#888'
     }
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'Ready for Pickup': return <CheckCircleIcon />
-      case 'In Progress': return <AccessTimeIcon />
-      case 'Completed': return <ReceiptIcon />
+      case 'ready': return <CheckCircleIcon />
+      case 'preparing': return <AccessTimeIcon />
+      case 'completed': return <ReceiptIcon />
       default: return <ReceiptIcon />
     }
   }
 
+  if (loading) {
+    return (
+      <PageContainer>
+        <LoadingText>Loading orders...</LoadingText>
+      </PageContainer>
+    )
+  }
+
   return (
     <PageContainer>
-      <BackButton onClick={() => navigate(-1)}>
-        ← Back
-      </BackButton>
-      
       <Header>
+        <MenuButton onClick={() => setIsDrawerOpen(true)}>
+          <MenuIcon />
+        </MenuButton>
         <HeaderContent>
           <ReceiptIcon sx={{ fontSize: 32, color: '#ff9800' }} />
           <HeaderText>
@@ -74,6 +96,8 @@ function Orders() {
           </HeaderText>
         </HeaderContent>
       </Header>
+
+      <DrawerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
       <Content>
         {orders.length === 0 ? (
@@ -91,8 +115,8 @@ function Orders() {
               <OrderCard key={order.id}>
                 <OrderHeader>
                   <OrderInfo>
-                    <OrderNumber>{order.id}</OrderNumber>
-                    <OrderDate>{order.date}</OrderDate>
+                    <OrderNumber>#{order.orderNumber}</OrderNumber>
+                    <OrderDate>{new Date(order.createdAt).toLocaleString()}</OrderDate>
                   </OrderInfo>
                   <OrderStatus $color={getStatusColor(order.status)}>
                     {getStatusIcon(order.status)}
@@ -102,7 +126,7 @@ function Orders() {
 
                 <OrderDetails>
                   <OrderType>
-                    {order.type === 'delivery' ? (
+                    {order.orderType === 'delivery' ? (
                       <>
                         <LocalShippingIcon sx={{ fontSize: 18 }} />
                         Delivery
@@ -114,26 +138,14 @@ function Orders() {
                       </>
                     )}
                   </OrderType>
-                  <OrderLocation>{order.location}</OrderLocation>
+                  {order.deliveryAddress && (
+                    <OrderLocation>{order.deliveryAddress}</OrderLocation>
+                  )}
                 </OrderDetails>
-
-                <OrderItems>
-                  <ItemsLabel>Items:</ItemsLabel>
-                  <ItemsList>
-                    {order.items.map((item, index) => (
-                      <OrderItem key={index}>{item}</OrderItem>
-                    ))}
-                  </ItemsList>
-                </OrderItems>
 
                 <OrderFooter>
                   <OrderTotal>{order.total.toFixed(2)} BD</OrderTotal>
                   <OrderActions>
-                    {order.status === 'Ready for Pickup' && (
-                      <ActionButton $primary>
-                        View Details
-                      </ActionButton>
-                    )}
                     <ActionButton onClick={() => navigate('/')}>
                       Reorder
                     </ActionButton>
@@ -155,23 +167,34 @@ const PageContainer = styled.div`
   color: white;
   min-height: 100vh;
   padding-bottom: 20px;
+  
+  @media (min-width: 769px) {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px 40px;
+  }
 `
 
-const BackButton = styled.button`
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
+const LoadingText = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  font-size: 18px;
+  color: #ccc;
+`
+
+const MenuButton = styled.button`
+  background: none;
   border: none;
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 16px;
+  color: #ff9800;
   cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 152, 0, 0.1);
   }
 `
 
@@ -179,19 +202,13 @@ const Header = styled.div`
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   padding: 16px;
   margin-bottom: 16px;
-  padding-top: 60px;
-  
-  @media (max-width: 768px) {
-    padding: 12px;
-    padding-top: 60px;
-    margin-bottom: 12px;
-  }
 `
 
 const HeaderContent = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: 8px;
 `
 
 const HeaderText = styled.div`
@@ -203,10 +220,6 @@ const Title = styled.h1`
   font-weight: bold;
   margin: 0;
   color: white;
-  
-  @media (max-width: 768px) {
-    font-size: 22px;
-  }
 `
 
 const Subtitle = styled.div`
@@ -217,10 +230,6 @@ const Subtitle = styled.div`
 
 const Content = styled.div`
   padding: 0 16px;
-  
-  @media (max-width: 768px) {
-    padding: 0 12px;
-  }
 `
 
 const EmptyOrders = styled.div`
@@ -265,6 +274,12 @@ const OrdersList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  
+  @media (min-width: 769px) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 24px;
+  }
 `
 
 const OrderCard = styled.div`
@@ -277,6 +292,14 @@ const OrderCard = styled.div`
   &:hover {
     border-color: #444;
   }
+  
+  @media (min-width: 769px) {
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(255, 152, 0, 0.1);
+      border-color: #ff9800;
+    }
+  }
 `
 
 const OrderHeader = styled.div`
@@ -284,11 +307,6 @@ const OrderHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 16px;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 8px;
-  }
 `
 
 const OrderInfo = styled.div``
@@ -315,10 +333,7 @@ const OrderStatus = styled.div`
   border-radius: 20px;
   font-size: 14px;
   font-weight: bold;
-  
-  svg {
-    font-size: 16px;
-  }
+  text-transform: capitalize;
 `
 
 const OrderDetails = styled.div`
@@ -326,12 +341,6 @@ const OrderDetails = styled.div`
   align-items: center;
   gap: 16px;
   margin-bottom: 16px;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
 `
 
 const OrderType = styled.div`
@@ -341,6 +350,7 @@ const OrderType = styled.div`
   color: #ff9800;
   font-weight: bold;
   font-size: 14px;
+  text-transform: capitalize;
 `
 
 const OrderLocation = styled.div`
@@ -348,40 +358,10 @@ const OrderLocation = styled.div`
   font-size: 14px;
 `
 
-const OrderItems = styled.div`
-  margin-bottom: 16px;
-`
-
-const ItemsLabel = styled.div`
-  color: #888;
-  font-size: 14px;
-  margin-bottom: 8px;
-`
-
-const ItemsList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`
-
-const OrderItem = styled.div`
-  background: #222;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 14px;
-`
-
 const OrderFooter = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
 `
 
 const OrderTotal = styled.div`
@@ -396,9 +376,9 @@ const OrderActions = styled.div`
 `
 
 const ActionButton = styled.button`
-  background: ${props => props.$primary ? 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)' : 'transparent'};
-  color: ${props => props.$primary ? 'white' : '#ccc'};
-  border: 1px solid ${props => props.$primary ? 'transparent' : '#444'};
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #444;
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 14px;
@@ -407,9 +387,7 @@ const ActionButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    ${props => props.$primary ? 
-      'transform: translateY(-1px); box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);' :
-      'border-color: #ff9800; color: #ff9800;'
-    }
+    border-color: #ff9800;
+    color: #ff9800;
   }
 `

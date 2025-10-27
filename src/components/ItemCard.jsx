@@ -4,19 +4,19 @@ import { Modal } from 'antd'
 import 'antd/dist/reset.css'
 import { useDispatch } from 'react-redux'
 import { addItem } from '../store/cartSlice'
-import AlmondImg from '../assets/options/Almond.jpg'
-import LargeImg from '../assets/options/Large.jpg'
-import MediumImg from '../assets/options/Medium.jpg'
-import OatImg from '../assets/options/Oat.jpg'
-import OneShotImg from '../assets/options/OneShot.png'
-import RegularImg from '../assets/options/Regular.jpg'
-import SmallImg from '../assets/options/Small.jpg'
+import AlmondImg from '../assets/options/Almond.svg'
+import LargeImg from '../assets/options/Large.svg'
+import MediumImg from '../assets/options/Medium.svg'
+import OatImg from '../assets/options/Oat.svg'
+import OneShotImg from '../assets/options/OneShot.svg'
+import RegularImg from '../assets/options/Regular.svg'
+import SmallImg from '../assets/options/Small.svg'
 import SoyImg from '../assets/options/Soy.jpg'
-import ThreeShotImg from '../assets/options/ThreeShot.png'
-import TwoShotImg from '../assets/options/TwoShot.png'
+import ThreeShotImg from '../assets/options/ThreeShot.svg'
+import TwoShotImg from '../assets/options/TwoShot.svg'
 import XLImg from '../assets/options/XL.jpg'
-import Sprite from '../assets/options/Sprite.png'
-import Redbull from '../assets/options/Redbull.png'
+import Sprite from '../assets/options/Sprite.svg'
+import Redbull from '../assets/options/Redbull.svg'
 
 const optionImages = {
   Almond: AlmondImg,
@@ -134,13 +134,14 @@ function ItemCard({ id, name, description, price, image, cat, options = {}, onAd
               }
               const imgSrc = optionImages[imgKey]
               const selected = valueMap[key] === v
+              const isMixer = key === 'mixer' || key === 'mixers'
               return (
                 <OptionButton
                   key={v}
                   $selected={selected}
                   onClick={() => setterMap[key](v)}
                 >
-                  {imgSrc && <OptionImg src={imgSrc} alt={v} />}
+                  {imgSrc && <OptionImg src={imgSrc} alt={v} loading="lazy" $selected={selected} $isMixer={isMixer} />}
                   <OptionLabel>
                     <span>{v}</span>
                   </OptionLabel>
@@ -166,7 +167,7 @@ function ItemCard({ id, name, description, price, image, cat, options = {}, onAd
     <>
       <Card onClick={openModal}>
         <ImageContainer>
-          <ProductImage src={image} alt={name} />
+          <ProductImage src={image} alt={name} loading="lazy" />
         </ImageContainer>
         <Content>
           <Title>{name}</Title>
@@ -229,6 +230,11 @@ const DarkModal = styled(Modal)`
     box-shadow: 0 8px 32px #0008;
     padding: 32px 24px 24px 24px;
     border: none;
+    
+    @media (min-width: 769px) {
+      max-width: 600px;
+      margin: 0 auto;
+    }
   }
   .ant-modal-header {
     background-color: #181818;
@@ -268,6 +274,21 @@ const Card = styled.div`
   flex-direction: column;
   cursor: pointer;
   margin: 10px;
+  transition: transform 0.2s;
+  
+  @media (min-width: 769px) {
+    width: calc(33.333% - 20px);
+    max-width: 350px;
+    
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(255, 152, 0, 0.2);
+    }
+  }
+  
+  @media (min-width: 1200px) {
+    width: calc(25% - 20px);
+  }
 `
 
 const ImageContainer = styled.div`
@@ -275,12 +296,17 @@ const ImageContainer = styled.div`
   overflow: hidden;
   background: #1a1a1a;
   border-radius: 25px;
+  
+  @media (min-width: 769px) {
+    height: 250px;
+  }
 `
 
 const ProductImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  will-change: transform; /* GPU acceleration */
 `
 
 const Content = styled.div`
@@ -332,6 +358,7 @@ const ModalImage = styled.img`
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 16px;
+  will-change: transform; /* GPU acceleration */
 `
 
 const OptionsContainer = styled.div`
@@ -351,8 +378,14 @@ const OptionImg = styled.img`
   object-fit: contain;
   border-radius: 8px;
   margin-bottom: 6px;
-  background: #222;
-  box-shadow: 0 2px 8px #0002;
+  will-change: transform; /* GPU acceleration */
+  filter: ${({ $selected, $isMixer }) => {
+    if ($isMixer && !$selected) return 'none'; // No color change for unselected mixers
+    if ($isMixer && $selected) return 'brightness(0) saturate(100%) invert(77%) sepia(79%) saturate(2500%) hue-rotate(359deg) brightness(102%) contrast(101%)'; // Apply color to selected mixers
+    return $selected 
+      ? 'brightness(0) saturate(100%) invert(77%) sepia(79%) saturate(2500%) hue-rotate(359deg) brightness(102%) contrast(101%)' 
+      : 'brightness(0) saturate(100%) invert(100%)';
+  }};
 `
 
 const OptionLabel = styled.div`
@@ -374,20 +407,15 @@ const QuantityContainer = styled.div`
 const QuantityButton = styled.button`
   background-color: #2a2a2a;
   color: white;
-  border: 1px solid #ff9800;
+  border: 1px solid #d7a000;
   border-radius: 8px;
   width: 40px;
   height: 40px;
-  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  &:hover {
-    background-color: #ff9800;
-    color: #1a1a1a;
-  }
   &:disabled {
     background-color: #333;
     border-color: #555;
@@ -449,8 +477,8 @@ const OptionButton = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  background: ${({ $selected }) => ($selected ? '#222' : '#2a2a2a')};
-  border: 2px solid ${({ $selected }) => ($selected ? '#ff9800' : 'transparent')};
+  background: ${({ $selected }) => ($selected ? '#1a1a1a' : '#2a2a2a')};
+  border: 2px solid ${({ $selected }) => ($selected ? '#d7a000' : '#555')};
   border-radius: 12px;
   padding: 8px 6px 4px 6px;
   width: 80px;
@@ -460,7 +488,7 @@ const OptionButton = styled.div`
   margin: 0;
   box-sizing: border-box;
   &:hover {
-    border: 2px solid #ff9800;
-    background: #222;
+    border: 2px solid #d7a000;
+    background: #1a1a1a;
   }
 `

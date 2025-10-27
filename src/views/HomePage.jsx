@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
-import Buttons from '../components/Buttons'
-import Logo from '../assets/background.jpg'
+// import Logo from '../assets/background.jpg'
+import Logo from '../assets/background.png'
 import ItemCard from '../components/ItemCard'
 import { useNavigate } from 'react-router-dom'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
+import MenuIcon from '@mui/icons-material/Menu'
 import { API_BACKEND } from './API'
-import Loading from '../components/Loading'
 import SkeletonCard from '../components/SkeletonCard'
 import ErrorMessage from '../components/ErrorMessage'
 import NotFound from '../components/NotFound'
 import UnderMaintenance from '../components/UnderMaintenance'
+import DrawerMenu from '../components/DrawerMenu'
+import { cacheManager } from '../utils/cache'
 
 function HomePage() {
   const [categories, setCategories] = useState([])
@@ -30,6 +32,7 @@ function HomePage() {
       return []
     }
   }) // Initialize cart from localStorage
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const navigate = useNavigate()
 
@@ -44,8 +47,23 @@ function HomePage() {
   const fetchCategories = () => {
     setError(null)
     setLoadingCategories(true)
+    
+    // Check cache first
+    const cached = cacheManager.get('categories')
+    if (cached) {
+      console.log('Using cached categories')
+      setCategories(cached)
+      if (cached.length > 0) {
+        setMainCategory(cached[0])
+      }
+      setLoadingCategories(false)
+      return
+    }
+
+    // Fetch from API
     axios.get(`${API_BACKEND}/categories`)
       .then((res) => {
+        cacheManager.set('categories', res.data)
         setCategories(res.data)
         if (res.data.length > 0) {
           setMainCategory(res.data[0])
@@ -61,9 +79,23 @@ function HomePage() {
 
   useEffect(() => {
     if (!mainCategory) return
+    
+    // Check cache first
+    const cacheKey = `subcategories_${mainCategory.id}`
+    const cached = cacheManager.get(cacheKey)
+    if (cached) {
+      console.log('Using cached subcategories')
+      setSubCategories(cached)
+      return
+    }
+
+    // Fetch from API
     axios
       .get(`${API_BACKEND}/categories/${mainCategory.id}/sub`)
-      .then((res) => setSubCategories(res.data))
+      .then((res) => {
+        cacheManager.set(cacheKey, res.data)
+        setSubCategories(res.data)
+      })
       .catch((err) => setError(err?.message || 'Failed to load subcategories'))
   }, [mainCategory])
 
@@ -71,11 +103,29 @@ function HomePage() {
     if (!mainCategory || !selectedSubCategory) return
     setError(null)
     setLoadingItems(true)
+    
+    // Check cache first
+    const cacheKey = `items_${mainCategory.id}_${selectedSubCategory}`
+    const cached = cacheManager.get(cacheKey)
+    if (cached) {
+      console.log('Using cached items')
+      setItems(cached)
+      setLoadingItems(false)
+      return
+    }
+
+    // Fetch from API
+    const startTime = performance.now()
     axios
       .get(
         `${API_BACKEND}/categories/${mainCategory.id}/${selectedSubCategory}/items`
       )
-      .then((res) => setItems(res.data))
+      .then((res) => {
+        const duration = performance.now() - startTime
+        console.log(`Items API took ${duration.toFixed(2)}ms`)
+        cacheManager.set(cacheKey, res.data)
+        setItems(res.data)
+      })
       .catch((err) => setError(err?.message || 'Failed to load items'))
       .finally(() => setLoadingItems(false))
   }, [mainCategory, selectedSubCategory])
@@ -153,7 +203,7 @@ function HomePage() {
   return (
     <>
       <PageWrapper>
-        {selectedSubCategory && (
+        {selectedSubCategory && !isDrawerOpen && (
           <BackButton onClick={() => {
             setSelectedSubCategory(null)
             setSearchQuery('') // clear search bar on back
@@ -161,6 +211,13 @@ function HomePage() {
             ← Back
           </BackButton>
         )}
+        
+        <MenuButton onClick={() => setIsDrawerOpen(true)}>
+          <MenuIcon />
+        </MenuButton>
+
+        <DrawerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+
         <BackgroundImage />
         <PageContainer ref={pageContainerRef}>
           <div style={{ gap: '10px' }}>
@@ -351,6 +408,7 @@ const PageWrapper = styled.div`
   color: white;
 `
 const BackgroundImage = styled.div`
+  position: relative;
   top: 0;
   left: 0;
   width: 100%;
@@ -359,7 +417,21 @@ const BackgroundImage = styled.div`
   background-size: cover;
   background-position: center;
   z-index: -1;
-  filter: brightness(0.5);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent 0%, transparent 50%, black 100%);
+    pointer-events: none;
+  }
+  
+  @media (min-width: 769px) {
+    height: 400px;
+  }
 `
 
 const FilterRow = styled.div`
@@ -394,6 +466,13 @@ const CardList = styled.div`
   flex-direction: column;
   gap: 30px;
   margin: 16px;
+  
+  @media (min-width: 769px) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 24px;
+    margin: 24px;
+  }
 `
 
 const CategoryCard = styled.div`
@@ -407,6 +486,15 @@ const CategoryCard = styled.div`
   align-items: center;
   overflow: hidden;
   cursor: pointer;
+  transition: transform 0.2s;
+  
+  @media (min-width: 769px) {
+    height: 200px;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
 `
 
 const Overlay = styled.div`
@@ -420,6 +508,12 @@ const CategoryName = styled.h2`
   font-size: 28px;
   text-transform: uppercase;
   color: white;
+  position: relative;
+  z-index: 1;
+  
+  @media (min-width: 769px) {
+    font-size: 36px;
+  }
 `
 
 const ItemsContainer = styled.div`
@@ -555,14 +649,33 @@ const BackButton = styled.button`
   left: 16px;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.5);
-  color: white;
+  color: #ff9800;
   border: none;
-  border-radius: 20px;
-  padding: 6px 12px;
+  border-radius: 12px;
+  padding: 12px;
   font-size: 16px;
   cursor: pointer;
+  transition: all 0.2s;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 152, 0, 0.2);
+  }
+`
+
+const MenuButton = styled.button`
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ff9800;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 152, 0, 0.2);
   }
 `

@@ -7,6 +7,19 @@ import CreditCardIcon from '@mui/icons-material/CreditCard'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import LocalAtmIcon from '@mui/icons-material/LocalAtm'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
+import EditIcon from '@mui/icons-material/Edit'
+import AddressModal from '../components/AddressModal'
+import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+
+// Fix for default markers in React Leaflet
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
 function OrderDetails() {
   const navigate = useNavigate()
@@ -14,15 +27,29 @@ function OrderDetails() {
   const { orderType = 'delivery', cartItems = [], total = 0 } = location.state || {}
   
   const [paymentMethod, setPaymentMethod] = useState('card')
-  const [address, setAddress] = useState('Bahrain, Manama - Building 123, Road 456')
+  const [showAddressModal, setShowAddressModal] = useState(false)
+  const [savedAddress, setSavedAddress] = useState(() => {
+    const saved = localStorage.getItem('deliveryAddress')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  const handleSaveAddress = (address) => {
+    setSavedAddress(address)
+    localStorage.setItem('deliveryAddress', JSON.stringify(address))
+    setShowAddressModal(false)
+  }
 
   const paymentMethods = [
     { id: 'card', name: 'Credit/Debit Card', icon: CreditCardIcon },
-    { id: 'wallet', name: 'Digital Wallet', icon: AccountBalanceWalletIcon },
     { id: 'cash', name: 'Cash on Delivery', icon: LocalAtmIcon }
   ]
 
   const handlePlaceOrder = () => {
+    if (orderType === 'delivery' && !savedAddress) {
+      alert('Please select a delivery address')
+      return
+    }
+    
     const orderNumber = Math.floor(Math.random() * 10000)
     
     // For both pickup and delivery orders, go to confirmation page
@@ -32,7 +59,8 @@ function OrderDetails() {
         orderType,
         total,
         paymentMethod,
-        orderNumber
+        orderNumber,
+        address: savedAddress
       }
     })
   }
@@ -65,18 +93,49 @@ function OrderDetails() {
           
           {orderType === 'delivery' ? (
             <LocationCard>
-              <LocationText>
-                <strong>Delivery Address:</strong>
-                <AddressInput
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Enter your delivery address"
-                />
-              </LocationText>
-              <MapPlaceholder>
-                <MapText>📍 Interactive Map</MapText>
-                <MapSubtext>Map integration coming soon</MapSubtext>
-              </MapPlaceholder>
+              {savedAddress ? (
+                <>
+                  <AddressHeader>
+                    <LocationText>
+                      <strong>Delivery Address:</strong>
+                      <AddressLine>Block {savedAddress.block}, {savedAddress.road}</AddressLine>
+                      <AddressLine>{savedAddress.building}</AddressLine>
+                      {savedAddress.apartment && <AddressLine>{savedAddress.apartment}</AddressLine>}
+                      {savedAddress.instructions && (
+                        <AddressInstructions>{savedAddress.instructions}</AddressInstructions>
+                      )}
+                    </LocationText>
+                    <EditButton onClick={() => setShowAddressModal(true)}>
+                      <EditIcon />
+                      Edit
+                    </EditButton>
+                  </AddressHeader>
+                  
+                  {savedAddress.position && (
+                    <MiniMapContainer>
+                      <MapContainer 
+                        center={savedAddress.position} 
+                        zoom={15} 
+                        dragging={false}
+                        zoomControl={false}
+                        scrollWheelZoom={false}
+                        doubleClickZoom={false}
+                      >
+                        <TileLayer
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          attribution='&copy; OpenStreetMap contributors'
+                        />
+                        <Marker position={savedAddress.position} />
+                      </MapContainer>
+                    </MiniMapContainer>
+                  )}
+                </>
+              ) : (
+                <SelectAddressButton onClick={() => setShowAddressModal(true)}>
+                  <LocationOnIcon />
+                  Select Delivery Address
+                </SelectAddressButton>
+              )}
             </LocationCard>
           ) : (
             <LocationCard>
@@ -86,10 +145,6 @@ function OrderDetails() {
                 Manama, Bahrain<br/>
                 Building 123, Road 456</p>
               </LocationText>
-              <MapPlaceholder>
-                <MapText>📍 Store Location</MapText>
-                <MapSubtext>Click to view directions</MapSubtext>
-              </MapPlaceholder>
             </LocationCard>
           )}
         </Section>
@@ -113,9 +168,6 @@ function OrderDetails() {
                   <span>{method.name}</span>
                   {method.id === 'cash' && orderType === 'pickup' && (
                     <small>Pay at store</small>
-                  )}
-                  {method.id === 'cash' && orderType === 'delivery' && (
-                    <small>Pay on delivery</small>
                   )}
                 </PaymentOptionText>
               </PaymentOption>
@@ -160,6 +212,13 @@ function OrderDetails() {
           Place Order • {total.toFixed(2)}BD
         </PlaceOrderButton>
       </Content>
+
+      <AddressModal
+        isOpen={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+        onSave={handleSaveAddress}
+        initialAddress={savedAddress}
+      />
     </PageContainer>
   )
 }
@@ -460,5 +519,86 @@ const PlaceOrderButton = styled.button`
   @media (max-width: 768px) {
     padding: 16px;
     font-size: 16px;
+  }
+`
+
+const AddressHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+`
+
+const AddressLine = styled.div`
+  color: #ccc;
+  margin-bottom: 4px;
+`
+
+const AddressInstructions = styled.div`
+  color: #888;
+  font-style: italic;
+  margin-top: 8px;
+`
+
+const EditButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: #ccc;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    border-color: #ff9800;
+    color: #ff9800;
+  }
+  
+  svg {
+    font-size: 18px;
+  }
+`
+
+const SelectAddressButton = styled.button`
+  width: 100%;
+  padding: 40px;
+  background: #222;
+  border: 2px dashed #ff9800;
+  border-radius: 12px;
+  color: #ff9800;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: #333;
+    border-color: #ffb74d;
+  }
+  
+  svg {
+    font-size: 24px;
+  }
+`
+
+const MiniMapContainer = styled.div`
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #2a2a2a;
+  
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
   }
 `

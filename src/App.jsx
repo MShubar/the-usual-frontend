@@ -5,6 +5,7 @@ import HomePage from './views/HomePage'
 import AdminPage from './views/AdminPage'
 import OrderDetails from './views/OrderDetails'
 import OrderConfirmation from './views/OrderConfirmation'
+import Orders from './views/Orders'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/order-details" element={<OrderDetails />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        <Route path="/orders" element={<Orders />} />
       </Routes>
     </Router>
   )

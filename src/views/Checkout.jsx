@@ -9,10 +9,21 @@ import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining'
 import StorefrontIcon from '@mui/icons-material/Storefront'
 import ClearAllIcon from '@mui/icons-material/ClearAll'
 import { useNavigate } from 'react-router-dom'
+import { API_BACKEND } from './API'
+import { auth } from '../firebase/config'
+import Modal from '@mui/material/Modal'
+import Box from '@mui/material/Box'
+import { Modal as AntModal } from 'antd'
 
 function Checkout() {
   const [cartItems, setCartItems] = useState([])
   const [orderType, setOrderType] = useState('delivery') // 'delivery' or 'pickup'
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [hasPendingOrder, setHasPendingOrder] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [userId, setUserId] = useState('')
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [showClearCartModal, setShowClearCartModal] = useState(false)
   const navigate = useNavigate()
 
   // Load cart from localStorage
@@ -24,6 +35,20 @@ function Checkout() {
       setCartItems([])
     }
   }, [])
+
+  useEffect(() => {
+    // Fetch user's orders and check for pending
+    if (userId) {
+      fetch(`${API_BACKEND}/orders?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setHasPendingOrder(data.some(order => order.status === 'pending'))
+          }
+        })
+        .catch(err => console.error('Error fetching orders:', err))
+    }
+  }, [userId])
 
   const removeItem = (itemId) => {
     const updatedCart = cartItems.filter((item) => item.id !== itemId)
@@ -44,10 +69,13 @@ function Checkout() {
   }
 
   const clearCart = () => {
-    if (window.confirm('Are you sure you want to clear all items from your cart?')) {
-      setCartItems([])
-      localStorage.removeItem('cart')
-    }
+    setShowClearCartModal(true)
+  }
+
+  const handleClearCartConfirm = () => {
+    setCartItems([])
+    localStorage.removeItem('cart')
+    setShowClearCartModal(false)
   }
 
   const subtotal = cartItems.reduce(
@@ -57,154 +85,296 @@ function Checkout() {
   const delivery = orderType === 'delivery' ? 0.40 : 0
   const total = subtotal + delivery
 
-  return (
-    <PageContainer>
-      <BackButton onClick={() => navigate(-1)}>
-        ← Back
-      </BackButton>
+  const createOrder = async (orderData) => {
+    try {
+      const response = await fetch(`${API_BACKEND}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      return result
+    } catch (error) {
+      console.error('Error creating order:', error)
+      throw error
+    }
+  }
+
+  const handlePlaceOrder = async () => {
+    if (orderType === 'pickup') {
+      if (!phone) {
+        setShowPhoneModal(true)
+        return
+      }
       
-      <Header>
-        <HeaderContent>
-          <ShoppingCartIcon sx={{ fontSize: 32, color: '#ff9800' }} />
-          <HeaderText>
-            <Title>Your Order</Title>
-            <Location>
-              <LocationOnIcon sx={{ fontSize: 16 }} />
-              {orderType === 'delivery' ? 'Delivery to Bahrain, Manama' : 'Pickup from Store'}
-            </Location>
-          </HeaderText>
-        </HeaderContent>
-      </Header>
+      // Format phone number
+      let formattedPhone = phone.trim()
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+973' + formattedPhone
+      }
 
-      {cartItems.length === 0 ? (
-        <EmptyCart>
-          <ShoppingCartIcon sx={{ fontSize: 64, color: '#555', mb: 2 }} />
-          <EmptyTitle>Your cart is empty</EmptyTitle>
-          <EmptySubtitle>Add some delicious items to get started!</EmptySubtitle>
-        </EmptyCart>
-      ) : (
-        <Content>
-          {/* Order Type Selection */}
-          <OrderTypeSection>
-            <SectionTitle>Order Type</SectionTitle>
-            <OrderTypeButtons>
-              <OrderTypeButton 
-                $active={orderType === 'delivery'}
-                onClick={() => setOrderType('delivery')}
+      setIsPlacingOrder(true)
+      try {
+        const orderData = {
+          orderType: 'pickup',
+          total: total,
+          paymentMethod: 'cash',
+          deliveryAddress: null,
+          userId: formattedPhone, // Use phone as userId directly
+          items: cartItems.map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            customizations: {
+              size: item.size || null,
+              milk: item.milk || null,
+              shots: item.shots || null,
+              mixer: item.mixer || null
+            }
+          }))
+        }
+
+        const orderResponse = await createOrder(orderData)
+        
+        localStorage.removeItem('cart')
+        navigate('/order-confirmation', {
+          state: {
+            orderType,
+            cartItems,
+            total,
+            paymentMethod: 'cash',
+            orderNumber: orderResponse.orderNumber || orderResponse.orderId,
+            success: true
+          }
+        })
+      } catch (error) {
+        console.error('Failed to place order:', error)
+        const orderNumber = Math.floor(Math.random() * 10000)
+        localStorage.removeItem('cart')
+        navigate('/order-confirmation', {
+          state: {
+            orderType,
+            cartItems,
+            total,
+            paymentMethod: 'cash',
+            orderNumber,
+            error: 'Order placed locally - backend unavailable'
+          }
+        })
+      } finally {
+        setIsPlacingOrder(false)
+      }
+    } else {
+      navigate('/order-details', {
+        state: {
+          orderType,
+          cartItems,
+          total
+        }
+      })
+    }
+  }
+
+  return (
+    <>
+      <PageContainer>
+        <BackButton onClick={() => navigate(-1)}>
+          ← Back
+        </BackButton>
+        
+        <Header>
+          <HeaderContent>
+            <ShoppingCartIcon sx={{ fontSize: 32, color: '#ff9800' }} />
+            <HeaderText>
+              <Title>Your Order</Title>
+              <Location>
+                <LocationOnIcon sx={{ fontSize: 16 }} />
+                {orderType === 'delivery' ? 'Delivery to Bahrain, Manama' : 'Pickup from Store'}
+              </Location>
+            </HeaderText>
+          </HeaderContent>
+        </Header>
+
+        {cartItems.length === 0 ? (
+          <EmptyCart>
+            <ShoppingCartIcon sx={{ fontSize: 64, color: '#555', mb: 2 }} />
+            <EmptyTitle>Your cart is empty</EmptyTitle>
+            <EmptySubtitle>Add some delicious items to get started!</EmptySubtitle>
+          </EmptyCart>
+        ) : (
+          <Content>
+            {/* Order Type Selection */}
+            <OrderTypeSection>
+              <SectionTitle>Order Type</SectionTitle>
+              <OrderTypeButtons>
+                <OrderTypeButton 
+                  $active={orderType === 'delivery'}
+                  onClick={() => setOrderType('delivery')}
+                >
+                  <DeliveryDiningIcon />
+                  <OrderTypeText>
+                    <span>Delivery</span>
+                    <small>0.400 BD fee</small>
+                  </OrderTypeText>
+                </OrderTypeButton>
+                <OrderTypeButton 
+                  $active={orderType === 'pickup'}
+                  onClick={() => setOrderType('pickup')}
+                >
+                  <StorefrontIcon />
+                  <OrderTypeText>
+                    <span>Pickup</span>
+                    <small>Free</small>
+                  </OrderTypeText>
+                </OrderTypeButton>
+              </OrderTypeButtons>
+            </OrderTypeSection>
+
+            <CartSection>
+              <CartHeader>
+                <SectionTitle>Order Items</SectionTitle>
+                <ClearAllButton onClick={clearCart}>
+                  <ClearAllIcon />
+                  Clear All
+                </ClearAllButton>
+              </CartHeader>
+              <CartList>
+                {cartItems.map((item, index) => (
+                  <CartItem key={`${item.id}-${index}`}>
+                    <ItemImage src={item.image} alt={item.name} />
+                    <ItemDetails>
+                      <ItemName>{item.name}</ItemName>
+                      <ItemCustomizations>
+                        {item.size && <Customization>Size: {item.size}</Customization>}
+                        {item.milk && <Customization>Milk: {item.milk}</Customization>}
+                        {item.shots && <Customization>Shots: {item.shots}</Customization>}
+                        {item.mixer && <Customization>Mixer: {item.mixer}</Customization>}
+                      </ItemCustomizations>
+                      <ItemPrice>{item.price.toFixed(2)}BD each</ItemPrice>
+                    </ItemDetails>
+                    <QuantityControls>
+                      <QuantityButton
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        disabled={item.quantity <= 1}
+                      >
+                        -
+                      </QuantityButton>
+                      <QuantityDisplay>{item.quantity}</QuantityDisplay>
+                      <QuantityButton
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      >
+                        +
+                      </QuantityButton>
+                    </QuantityControls>
+                    <ItemTotal>{(item.price * item.quantity).toFixed(2)}BD</ItemTotal>
+                    <DeleteButton onClick={() => removeItem(item.id)}>
+                      <DeleteIcon />
+                    </DeleteButton>
+                  </CartItem>
+                ))}
+              </CartList>
+            </CartSection>
+
+            <OrderSummary>
+              <SectionTitle>Order Summary</SectionTitle>
+              <SummaryRow>
+                <span>Subtotal ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} items)</span>
+                <span>{subtotal.toFixed(2)}BD</span>
+              </SummaryRow>
+              <SummaryRow>
+                <span>{orderType === 'delivery' ? 'Delivery Fee' : 'Pickup Fee'}</span>
+                <span>{delivery.toFixed(2)}BD</span>
+              </SummaryRow>
+              <Divider />
+              <TotalRow>
+                <span>Total</span>
+                <span>{total.toFixed(2)}BD</span>
+              </TotalRow>
+              
+              <PlaceOrderButton
+                onClick={handlePlaceOrder}
+                disabled={isPlacingOrder}
               >
-                <DeliveryDiningIcon />
-                <OrderTypeText>
-                  <span>Delivery</span>
-                  <small>0.400 BD fee</small>
-                </OrderTypeText>
-              </OrderTypeButton>
-              <OrderTypeButton 
-                $active={orderType === 'pickup'}
-                onClick={() => setOrderType('pickup')}
-              >
-                <StorefrontIcon />
-                <OrderTypeText>
-                  <span>Pickup</span>
-                  <small>Free</small>
-                </OrderTypeText>
-              </OrderTypeButton>
-            </OrderTypeButtons>
-          </OrderTypeSection>
-
-          <CartSection>
-            <CartHeader>
-              <SectionTitle>Order Items</SectionTitle>
-              <ClearAllButton onClick={clearCart}>
-                <ClearAllIcon />
-                Clear All
-              </ClearAllButton>
-            </CartHeader>
-            <CartList>
-              {cartItems.map((item, index) => (
-                <CartItem key={`${item.id}-${index}`}>
-                  <ItemImage src={item.image} alt={item.name} />
-                  <ItemDetails>
-                    <ItemName>{item.name}</ItemName>
-                    <ItemCustomizations>
-                      {item.size && <Customization>Size: {item.size}</Customization>}
-                      {item.milk && <Customization>Milk: {item.milk}</Customization>}
-                      {item.shots && <Customization>Shots: {item.shots}</Customization>}
-                      {item.mixer && <Customization>Mixer: {item.mixer}</Customization>}
-                    </ItemCustomizations>
-                    <ItemPrice>{item.price.toFixed(2)}BD each</ItemPrice>
-                  </ItemDetails>
-                  <QuantityControls>
-                    <QuantityButton
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </QuantityButton>
-                    <QuantityDisplay>{item.quantity}</QuantityDisplay>
-                    <QuantityButton
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    >
-                      +
-                    </QuantityButton>
-                  </QuantityControls>
-                  <ItemTotal>{(item.price * item.quantity).toFixed(2)}BD</ItemTotal>
-                  <DeleteButton onClick={() => removeItem(item.id)}>
-                    <DeleteIcon />
-                  </DeleteButton>
-                </CartItem>
-              ))}
-            </CartList>
-          </CartSection>
-
-          <OrderSummary>
-            <SectionTitle>Order Summary</SectionTitle>
-            <SummaryRow>
-              <span>Subtotal ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} items)</span>
-              <span>{subtotal.toFixed(2)}BD</span>
-            </SummaryRow>
-            <SummaryRow>
-              <span>{orderType === 'delivery' ? 'Delivery Fee' : 'Pickup Fee'}</span>
-              <span>{delivery.toFixed(2)}BD</span>
-            </SummaryRow>
-            <Divider />
-            <TotalRow>
-              <span>Total</span>
-              <span>{total.toFixed(2)}BD</span>
-            </TotalRow>
-            
-            <PlaceOrderButton
-              onClick={() => {
-                if (orderType === 'pickup') {
-                  // For pickup orders, go directly to confirmation
-                  const orderNumber = Math.floor(Math.random() * 10000)
-                  localStorage.removeItem('cart')
-                  navigate('/order-confirmation', {
-                    state: {
-                      orderType,
-                      cartItems,
-                      total,
-                      paymentMethod: 'cash', // Default for pickup
-                      orderNumber
-                    }
-                  })
-                } else {
-                  // For delivery orders, go to order details
-                  navigate('/order-details', {
-                    state: {
-                      orderType,
-                      cartItems,
-                      total
-                    }
-                  })
+                {isPlacingOrder 
+                  ? 'Placing Order...' 
+                  : orderType === 'delivery' 
+                    ? 'Continue to Order Details' 
+                    : 'Place Pickup Order'
                 }
-              }}
-            >
-              {orderType === 'delivery' ? 'Continue to Order Details' : 'Place Pickup Order'}
-            </PlaceOrderButton>
-          </OrderSummary>
-        </Content>
-      )}
-    </PageContainer>
+              </PlaceOrderButton>
+
+              <Modal
+                open={showPhoneModal}
+                onClose={() => setShowPhoneModal(false)}
+                aria-labelledby="phone-modal-title"
+              >
+                <Box sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  bgcolor: '#222',
+                  color: 'white',
+                  borderRadius: 2,
+                  boxShadow: 24,
+                  p: 4,
+                  minWidth: 320,
+                }}>
+                  <h2 id="phone-modal-title">Enter Phone Number</h2>
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number (e.g., 39970100)"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 8, border: 'none', background: '#333', color: 'white' }}
+                  />
+                  <button 
+                    onClick={() => {
+                      if (phone) {
+                        setShowPhoneModal(false)
+                        handlePlaceOrder()
+                      } else {
+                        alert('Please enter a phone number')
+                      }
+                    }} 
+                    style={{ width: '100%', padding: 10, borderRadius: 8, background: '#ff9800', color: 'white', border: 'none' }}
+                  >
+                    Continue
+                  </button>
+                </Box>
+              </Modal>
+
+              <ClearCartModal
+                title="Clear Cart?"
+                open={showClearCartModal}
+                onCancel={() => setShowClearCartModal(false)}
+                footer={[
+                  <ModalCancelButton key="cancel" onClick={() => setShowClearCartModal(false)}>
+                    Keep Items
+                  </ModalCancelButton>,
+                  <ModalConfirmButton key="confirm" onClick={handleClearCartConfirm}>
+                    Clear All Items
+                  </ModalConfirmButton>
+                ]}
+                centered
+              >
+                <ModalContent>
+                  <p>Are you sure you want to remove all items from your cart?</p>
+                </ModalContent>
+              </ClearCartModal>
+            </OrderSummary>
+
+          </Content>
+        )}
+      </PageContainer>
+    </>
   )
 }
 
@@ -223,15 +393,16 @@ const BackButton = styled.button`
   left: 16px;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.5);
-  color: white;
+  color: #ff9800;
   border: none;
-  border-radius: 20px;
-  padding: 6px 12px;
+  border-radius: 12px;
+  padding: 12px;
   font-size: 16px;
   cursor: pointer;
+  transition: all 0.2s;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 152, 0, 0.2);
   }
 `
 
@@ -640,7 +811,6 @@ const DeleteButton = styled.button`
   color: white;
   border: none;
   border-radius: 8px;
-  width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
@@ -685,8 +855,7 @@ const SummaryRow = styled.div`
   }
 `
 
-const Divider = styled.hr`
-  border: none;
+const Divider = styled.div`
   border-top: 1px solid #333;
   margin: 12px 0;
 `
@@ -719,7 +888,7 @@ const PlaceOrderButton = styled.button`
   margin-top: 16px;
   transition: all 0.3s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
   }
@@ -727,10 +896,101 @@ const PlaceOrderButton = styled.button`
   &:active {
     transform: translateY(0);
   }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
   
   @media (max-width: 768px) {
     padding: 14px;
     font-size: 16px;
     margin-top: 12px;
+  }
+`
+
+const ClearCartModal = styled(AntModal)`
+  .ant-modal-content {
+    background-color: #181818;
+    color: white;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px #0008;
+    padding: 32px 24px 24px 24px;
+    border: none;
+  }
+  .ant-modal-header {
+    background-color: #181818;
+    color: white;
+    border-bottom: 2px solid #222;
+    border-radius: 18px 18px 0 0;
+    padding: 24px 24px 12px 24px;
+  }
+  .ant-modal-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .ant-modal-close, .ant-modal-close-x {
+    color: white !important;
+    font-size: 22px;
+    top: 18px;
+    right: 18px;
+  }
+  .ant-modal-footer {
+    background-color: #181818;
+    border-top: 2px solid #222;
+    border-radius: 0 0 18px 18px;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+`
+
+const ModalContent = styled.div`
+  color: #ccc;
+  font-size: 16px;
+  line-height: 1.6;
+  
+  p {
+    margin: 8px 0;
+  }
+`
+
+const ModalCancelButton = styled.button`
+  background: #222;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 8px;
+  font-size: 16px;
+  padding: 10px 24px;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  
+  &:hover {
+    background: #444;
+    color: #ff9800;
+    border-color: #ff9800;
+  }
+`
+
+const ModalConfirmButton = styled.button`
+  background: linear-gradient(90deg, #ff9800 60%, #ffb74d 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 10px 28px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0002;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: linear-gradient(90deg, #ffa726 60%, #ffd54f 100%);
+    color: #222;
   }
 `
