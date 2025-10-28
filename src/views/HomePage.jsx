@@ -395,18 +395,11 @@ function HomePage() {
 
 export default HomePage
 
-const PageContainer = styled.div`
-  position: relative;
-  padding: 10px;
-  background-color: black;
-  min-height: 100vh;
-  height: 100%;
-`
 const PageWrapper = styled.div`
   position: relative;
   min-height: 100%;
   color: white;
-  padding-top: max(0px, env(safe-area-inset-top));
+  background-color: black;
   padding-bottom: max(0px, env(safe-area-inset-bottom));
   padding-left: max(0px, env(safe-area-inset-left));
   padding-right: max(0px, env(safe-area-inset-right));
@@ -422,7 +415,7 @@ const BackgroundImage = styled.div`
   background-size: cover;
   background-position: center;
   z-index: -1;
-  margin-top: calc(-1 * max(0px, env(safe-area-inset-top)));
+  padding-top: max(0px, env(safe-area-inset-top)));
   
   &::after {
     content: '';
@@ -438,6 +431,16 @@ const BackgroundImage = styled.div`
   @media (min-width: 769px) {
     height: 400px;
   }
+`
+
+const PageContainer = styled.div`
+  position: relative;
+  padding: 10px;
+  padding-left: max(10px, calc(10px + env(safe-area-inset-left)));
+  padding-right: max(10px, calc(10px + env(safe-area-inset-right)));
+  background-color: black;
+  min-height: 100vh;
+  height: 100%;
 `
 
 const FilterRow = styled.div`
