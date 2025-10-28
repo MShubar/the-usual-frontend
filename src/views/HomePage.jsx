@@ -196,13 +196,6 @@ function HomePage() {
     }
   }, [cart])
 
-  const scrollToTop = () => {
-    if (pageContainerRef.current) {
-      pageContainerRef.current.scrollTop = 0;
-    }
-    window.scrollTo(0, 0);
-  };
-
   if (maintenance) {
     return <UnderMaintenance message="Site is under maintenance. Please check back soon." />
   }
@@ -214,7 +207,6 @@ function HomePage() {
           <BackButton onClick={() => {
             setSelectedSubCategory(null)
             setSearchQuery('') // clear search bar on back
-            scrollToTop() // scroll to top when going back
           }}>
             ← Back
           </BackButton>
@@ -300,7 +292,6 @@ function HomePage() {
                       onClick={() => {
                         setSelectedSubCategory(subCat.name)
                         setSearchQuery('') // clear search bar on subcategory select
-                        scrollToTop() // scroll to top when selecting subcategory
                       }}
                       style={{
                         backgroundImage: `url(${subCat.image})`,
@@ -404,29 +395,17 @@ function HomePage() {
 
 export default HomePage
 
-const PageWrapper = styled.div`
-  position: relative;
-  min-height: 100vh;
-  color: white;
-  background-color: black;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-`
 const PageContainer = styled.div`
   position: relative;
-  z-index: 1;
   padding: 10px;
-  padding-left: max(10px, calc(10px + env(safe-area-inset-left)));
-  padding-right: max(10px, calc(10px + env(safe-area-inset-right)));
-  padding-top: calc(250px + env(safe-area-inset-top, 0px));
-  background-color: transparent;
+  background-color: black;
   min-height: 100vh;
-  scroll-behavior: smooth;
-  
-  @media (min-width: 769px) {
-    padding-top: calc(400px + env(safe-area-inset-top, 0px));
-  }
+  height: 100%;
+`
+const PageWrapper = styled.div`
+  position: relative;
+  min-height: 100%;
+  color: white;
 `
 const BackgroundImage = styled.div`
   position: relative;
