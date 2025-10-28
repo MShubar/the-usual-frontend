@@ -406,16 +406,17 @@ const PageWrapper = styled.div`
 `
 
 const BackgroundImage = styled.div`
-  position: relative;
+  position: absolute;
   top: 0;
   left: 0;
+  right: 0;
   width: 100%;
-  height: 250px;
+  height: calc(250px + max(0px, env(safe-area-inset-top)));
   background-image: url(${Logo});
   background-size: cover;
   background-position: center;
-  z-index: -1;
-  padding-top: max(0px, env(safe-area-inset-top)));
+  background-attachment: fixed;
+  z-index: 0;
   
   &::after {
     content: '';
@@ -429,18 +430,24 @@ const BackgroundImage = styled.div`
   }
   
   @media (min-width: 769px) {
-    height: 400px;
+    height: calc(400px + max(0px, env(safe-area-inset-top)));
   }
 `
 
 const PageContainer = styled.div`
   position: relative;
+  z-index: 1;
   padding: 10px;
   padding-left: max(10px, calc(10px + env(safe-area-inset-left)));
   padding-right: max(10px, calc(10px + env(safe-area-inset-right)));
+  padding-top: calc(250px + max(0px, env(safe-area-inset-top)));
   background-color: black;
   min-height: 100vh;
   height: 100%;
+  
+  @media (min-width: 769px) {
+    padding-top: calc(400px + max(0px, env(safe-area-inset-top)));
+  }
 `
 
 const FilterRow = styled.div`
