@@ -399,10 +399,12 @@ const PageWrapper = styled.div`
   min-height: 100vh;
   color: white;
   background-color: black;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 `
 
 const BackgroundImage = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -412,6 +414,16 @@ const BackgroundImage = styled.div`
   background-size: cover;
   background-position: center;
   z-index: 0;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background-color: black;
+  }
   
   &::after {
     content: '';
