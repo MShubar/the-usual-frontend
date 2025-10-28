@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
+// import Logo from '../assets/background.jpg'
 import Logo from '../assets/background.png'
 import ItemCard from '../components/ItemCard'
 import { useNavigate } from 'react-router-dom'
@@ -394,36 +395,28 @@ function HomePage() {
 
 export default HomePage
 
+const PageContainer = styled.div`
+  position: relative;
+  padding: 10px;
+  background-color: black;
+  min-height: 100vh;
+  height: 100%;
+`
 const PageWrapper = styled.div`
   position: relative;
-  min-height: 100vh;
+  min-height: 100%;
   color: white;
-  background-color: black;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
 `
-
 const BackgroundImage = styled.div`
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
-  right: 0;
   width: 100%;
-  height: calc(250px + env(safe-area-inset-top, 0px));
+  height: 250px;
   background-image: url(${Logo});
   background-size: cover;
   background-position: center;
-  z-index: 0;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top, 0px);
-    background-color: black;
-  }
+  z-index: -1;
   
   &::after {
     content: '';
@@ -437,22 +430,7 @@ const BackgroundImage = styled.div`
   }
   
   @media (min-width: 769px) {
-    height: calc(400px + env(safe-area-inset-top, 0px));
-  }
-`
-
-const PageContainer = styled.div`
-  position: relative;
-  z-index: 1;
-  padding: 10px;
-  padding-left: max(10px, calc(10px + env(safe-area-inset-left)));
-  padding-right: max(10px, calc(10px + env(safe-area-inset-right)));
-  padding-top: calc(250px + env(safe-area-inset-top, 0px));
-  background-color: transparent;
-  min-height: 100vh;
-  
-  @media (min-width: 769px) {
-    padding-top: calc(400px + env(safe-area-inset-top, 0px));
+    height: 400px;
   }
 `
 
