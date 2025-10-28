@@ -7,6 +7,7 @@ body {
   padding-bottom: max(0px, env(safe-area-inset-bottom));
   padding-left: max(0px, env(safe-area-inset-left));
   padding-right: max(0px, env(safe-area-inset-right));
+  background-color: black;
 }
 
 #root {
