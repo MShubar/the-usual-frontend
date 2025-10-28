@@ -406,7 +406,12 @@ const PageWrapper = styled.div`
   position: relative;
   min-height: 100%;
   color: white;
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
 `
+
 const BackgroundImage = styled.div`
   position: relative;
   top: 0;
@@ -417,6 +422,7 @@ const BackgroundImage = styled.div`
   background-size: cover;
   background-position: center;
   z-index: -1;
+  margin-top: calc(-1 * max(0px, env(safe-area-inset-top)));
   
   &::after {
     content: '';
