@@ -1,27 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
-// import Logo from '../assets/background.jpg'
-import Logo from '../assets/background.png'
-import ItemCard from '../components/ItemCard'
+import Logo from '../assets/background.webp'
 import { useNavigate } from 'react-router-dom'
-import LocationOnIcon from '@mui/icons-material/LocationOn'
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import MenuIcon from '@mui/icons-material/Menu'
 import { API_BACKEND } from './API'
-import SkeletonCard from '../components/SkeletonCard'
 import ErrorMessage from '../components/ErrorMessage'
-import NotFound from '../components/NotFound'
 import UnderMaintenance from '../components/UnderMaintenance'
 import DrawerMenu from '../components/DrawerMenu'
-import { cacheManager } from '../utils/cache'
+import Location from '../components/Location'
+import FilterRow from '../components/FilterRow'
+import BackButton from '../components/BackButton'
+import CategoryGrid from '../components/CategoryGrid'
+import ItemsGrid from '../components/ItemsGrid'
+import FloatingCartButton from '../components/FloatingCartButton'
+import useFetch from '../hooks/useFetch'
 
 function HomePage() {
-  const [categories, setCategories] = useState([])
   const [mainCategory, setMainCategory] = useState("")
-  const [subCategories, setSubCategories] = useState([])
   const [selectedSubCategory, setSelectedSubCategory] = useState(null)
-  const [items, setItems] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState(() => {
     try {
@@ -31,106 +27,88 @@ function HomePage() {
       console.error('Error loading cart from localStorage:', error)
       return []
     }
-  }) // Initialize cart from localStorage
+  }) 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false)
   const navigate = useNavigate()
-
-  const [loadingCategories, setLoadingCategories] = useState(false)
-  const [loadingItems, setLoadingItems] = useState(false)
-  const [error, setError] = useState(null)
   const [maintenance] = useState(false)
 
   const pageContainerRef = useRef(null)
   const lastScrollTop = useRef(0)
 
-  const fetchCategories = () => {
-    setError(null)
-    setLoadingCategories(true)
-    
-    // Check cache first
-    const cached = cacheManager.get('categories')
-    if (cached) {
-      console.log('Using cached categories')
-      setCategories(cached)
-      if (cached.length > 0) {
-        setMainCategory(cached[0])
+  // Fetch categories with caching
+  const {
+    data: categories,
+    loading: loadingCategories,
+    error: categoriesError,
+    fetchData: fetchCategories,
+    setError: setCategoriesError
+  } = useFetch(`${API_BACKEND}/categories`, {
+    cacheKey: 'categories',
+    onSuccess: (data) => {
+      if (data.length > 0) {
+        setMainCategory(data[0])
       }
-      setLoadingCategories(false)
-      return
     }
+  })
 
-    // Fetch from API
-    axios.get(`${API_BACKEND}/categories`)
-      .then((res) => {
-        cacheManager.set('categories', res.data)
-        setCategories(res.data)
-        if (res.data.length > 0) {
-          setMainCategory(res.data[0])
+  // Fetch subcategories with caching
+  const {
+    data: subCategories,
+    fetchData: fetchSubCategories,
+  } = useFetch(
+    mainCategory ? `${API_BACKEND}/categories/${mainCategory.id}/sub` : null,
+    {
+      cacheKey: mainCategory ? `subcategories_${mainCategory.id}` : null,
+      onSuccess: (data) => {
+        // Sort subcategories alphabetically by name
+        if (Array.isArray(data)) {
+          data.sort((a, b) => a.name.localeCompare(b.name))
         }
-      })
-      .catch((err) => setError(err?.message || 'Failed to load categories'))
-      .finally(() => setLoadingCategories(false))
-  }
+      },
+      onError: (err) => setCategoriesError(err?.message || 'Failed to load subcategories')
+    }
+  )
 
+  // Fetch items with caching
+  const {
+    data: items,
+    loading: loadingItems,
+    fetchData: fetchItems,
+    setData: setItems
+  } = useFetch(
+    mainCategory && selectedSubCategory 
+      ? `${API_BACKEND}/categories/${mainCategory.id}/${selectedSubCategory}/items`
+      : null,
+    {
+      cacheKey: mainCategory && selectedSubCategory 
+        ? `items_${mainCategory.id}_${selectedSubCategory}`
+        : null,
+      onError: (err) => setCategoriesError(err?.message || 'Failed to load items')
+    }
+  )
+
+  // Initial fetch
   useEffect(() => {
     fetchCategories()
   }, [])
 
+  // Fetch subcategories when main category changes
   useEffect(() => {
-    if (!mainCategory) return
-    
-    // Check cache first
-    const cacheKey = `subcategories_${mainCategory.id}`
-    const cached = cacheManager.get(cacheKey)
-    if (cached) {
-      console.log('Using cached subcategories')
-      setSubCategories(cached)
-      return
+    if (mainCategory) {
+      fetchSubCategories()
     }
-
-    // Fetch from API
-    axios
-      .get(`${API_BACKEND}/categories/${mainCategory.id}/sub`)
-      .then((res) => {
-        cacheManager.set(cacheKey, res.data)
-        setSubCategories(res.data)
-      })
-      .catch((err) => setError(err?.message || 'Failed to load subcategories'))
   }, [mainCategory])
 
+  // Fetch items when subcategory is selected
   useEffect(() => {
-    if (!mainCategory || !selectedSubCategory) return
-    setError(null)
-    setLoadingItems(true)
-    
-    // Check cache first
-    const cacheKey = `items_${mainCategory.id}_${selectedSubCategory}`
-    const cached = cacheManager.get(cacheKey)
-    if (cached) {
-      console.log('Using cached items')
-      setItems(cached)
-      setLoadingItems(false)
-      return
+    if (mainCategory && selectedSubCategory) {
+      setCategoriesError(null)
+      fetchItems()
     }
-
-    // Fetch from API
-    const startTime = performance.now()
-    axios
-      .get(
-        `${API_BACKEND}/categories/${mainCategory.id}/${selectedSubCategory}/items`
-      )
-      .then((res) => {
-        const duration = performance.now() - startTime
-        console.log(`Items API took ${duration.toFixed(2)}ms`)
-        cacheManager.set(cacheKey, res.data)
-        setItems(res.data)
-      })
-      .catch((err) => setError(err?.message || 'Failed to load items'))
-      .finally(() => setLoadingItems(false))
   }, [mainCategory, selectedSubCategory])
 
-  // Add scroll-to-refresh effect
+  // Scroll-to-refresh effect
   useEffect(() => {
     const container = pageContainerRef.current
     if (!container) return
@@ -140,7 +118,6 @@ function HomePage() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const scrollTop = container.scrollTop
-          // If user scrolled up to top (with a small threshold)
           if (scrollTop <= 0 && lastScrollTop.current > 10) {
             fetchCategories()
           }
@@ -152,7 +129,7 @@ function HomePage() {
     }
     container.addEventListener('scroll', onScroll)
     return () => container.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [fetchCategories])
 
   const getTotalItems = () => {
     return cart.reduce((total, item) => total + item.quantity, 0)
@@ -164,7 +141,6 @@ function HomePage() {
 
   const addToCart = (item) => {
     setCart(prevCart => {
-      // Create a unique identifier for items with different customizations
       const itemKey = `${item.id}-${item.size || ''}-${item.milk || ''}-${item.shots || ''}-${item.mixer || ''}`;
       
       const existingItem = prevCart.find(cartItem => {
@@ -187,7 +163,6 @@ function HomePage() {
     });
   };
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem('cart', JSON.stringify(cart))
@@ -196,6 +171,30 @@ function HomePage() {
     }
   }, [cart])
 
+  const handleCategorySelect = (cat) => {
+    setMainCategory(cat)
+    setSelectedSubCategory(null)
+    setItems([])
+  }
+
+  const handleSubCategoryClick = (subCat) => {
+    setSelectedSubCategory(subCat.name)
+    setSearchQuery('')
+    // Scroll to top of page
+    if (pageContainerRef.current) {
+      pageContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    // Also scroll window to top in case container scroll doesn't work
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Listen to item modal open/close events
+  useEffect(() => {
+    const handler = (e) => setIsItemModalOpen(Boolean(e?.detail?.open))
+    window.addEventListener('item-modal-toggle', handler)
+    return () => window.removeEventListener('item-modal-toggle', handler)
+  }, [])
+
   if (maintenance) {
     return <UnderMaintenance message="Site is under maintenance. Please check back soon." />
   }
@@ -203,68 +202,53 @@ function HomePage() {
   return (
     <>
       <PageWrapper>
-        {selectedSubCategory && !isDrawerOpen && (
-          <BackButton onClick={() => {
+        <BackButton 
+          show={selectedSubCategory && !isDrawerOpen && !isItemModalOpen}
+          onClick={() => {
             setSelectedSubCategory(null)
-            setSearchQuery('') // clear search bar on back
-          }}>
-            ← Back
-          </BackButton>
-        )}
+            setSearchQuery('')
+            // Scroll to top of page
+            if (pageContainerRef.current) {
+              pageContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
         
-        <MenuButton onClick={() => setIsDrawerOpen(true)}>
-          <MenuIcon />
-        </MenuButton>
-
+        {!isItemModalOpen && (
+          <MenuButton 
+            onClick={() => setIsDrawerOpen(prev => !prev)}
+            $hasBackButton={selectedSubCategory}
+          >
+            <MenuIcon />
+          </MenuButton>
+        )}
         <DrawerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
-
         <BackgroundImage />
         <PageContainer ref={pageContainerRef}>
-          <div style={{ gap: '10px' }}>
-            <Title>The Usual</Title>
-            <Location>
-              <LocationOnIcon />
-              Bahrain, Manama
-            </Location>
-          </div>
+          <Location />
 
-          {error && (
+          {categoriesError && (
             <div style={{ margin: 16 }}>
               <ErrorMessage
                 title="Load error"
-                message={error}
+                message={categoriesError}
                 onRetry={() => {
-                  if (!categories.length) fetchCategories()
+                  if (!categories?.length) fetchCategories()
                   if (selectedSubCategory) {
-                    setSelectedSubCategory(selectedSubCategory)
+                    fetchItems()
                   }
                 }}
               />
             </div>
           )}
 
-          <FilterRow>
-            {loadingCategories ? (
-              <SkeletonCard count={4} variant="item" />
-            ) : categories.length === 0 ? (
-              <NotFound title="No categories" message="No categories available." />
-            ) : (
-              categories.map((cat) => (
-                <FilterButton
-                  key={cat.id}
-                  $active={cat.id === mainCategory?.id}
-                  onClick={() => {
-                    const selectedCat = categories.find(c => c.id === cat.id)
-                    setMainCategory(selectedCat)
-                    setSelectedSubCategory(null)
-                    setItems([])
-                  }}
-                >
-                  {cat.name}
-                </FilterButton>
-              ))
-            )}
-          </FilterRow>
+          <FilterRow
+            categories={categories || []}
+            loading={loadingCategories}
+            activeId={mainCategory?.id}
+            onCategorySelect={handleCategorySelect}
+          />
 
           <SearchContainer>
             <SearchInput
@@ -275,119 +259,43 @@ function HomePage() {
             />
           </SearchContainer>
 
-          {!selectedSubCategory && (
-            <CardList>
-              {subCategories.length === 0 && loadingCategories ? (
-                <SkeletonCard count={3} variant="subcategory" fullWidth />
-              ) : subCategories.length === 0 ? (
-                <NotFound title="No subcategories" message="No subcategories found." />
-              ) : (
-                subCategories
-                  .filter((subCat) =>
-                    subCat.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((subCat) => (
-                    <CategoryCard
-                      key={subCat.id}
-                      onClick={() => {
-                        setSelectedSubCategory(subCat.name)
-                        setSearchQuery('') // clear search bar on subcategory select
-                      }}
-                      style={{
-                        backgroundImage: `url(${subCat.image})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    >
-                      <Overlay />
-                      <CategoryName>{subCat.name}</CategoryName>
-                    </CategoryCard>
-                  ))
-              )}
-            </CardList>
-          )}
+          <ContentWrapper>
+            <TransitionContainer $show={!selectedSubCategory}>
+              <CategoryGrid
+                categories={subCategories || []}
+                loading={loadingCategories && (!subCategories || subCategories.length === 0)}
+                searchQuery={searchQuery}
+                onCategoryClick={handleSubCategoryClick}
+                skeletonCount={3}
+                notFoundTitle="No subcategories"
+                notFoundMessage="No subcategories found."
+              />
+            </TransitionContainer>
 
-          {selectedSubCategory && (
-            <>
-              <h1>{selectedSubCategory}</h1>
-              <ItemsContainer>
-                {loadingItems ? (
-                  <SkeletonCard count={6} variant="item" />
-                ) : items.length > 0 ? (
-                  items
-                    .filter(item =>
-                      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((item) => {
-                      const formatArray = (val) => {
-                        if (!val) return []
-                        if (Array.isArray(val)) {
-                          if (val.length > 0 && typeof val[0] === 'object' && val[0] !== null && 'value' in val[0]) {
-                            return val
-                          }
-                          return val
-                        }
-                        if (typeof val === 'string')
-                          return val.replace(/[{}]/g, '').split(',')
-                        return []
-                      }
-
-                      const formattedItem = {
-                        ...item,
-                        options: {
-                          sizes: formatArray(item.sizes),
-                          milk: formatArray(item.milks),
-                          shots: formatArray(item.shots),
-                          mixer: formatArray(item.mixers)
-                        }
-                      }
-
-                      return (
-                        <ItemCard
-                          key={item.id}
-                          id={item.id}
-                          name={item.name}
-                          description={item.description}
-                          serves={item.serves}
-                          price={item.price}
-                          image={item.image}
-                          cat={selectedSubCategory}
-                          options={formattedItem.options}
-                          onAddToCart={addToCart}
-                        />
-                      )
-                    })
-                ) : (
-                  <NotFound title="No items" message="No items available for this category." />
-                )}
-              </ItemsContainer>
-            </>
-          )}
+            <TransitionContainer $show={!!selectedSubCategory}>
+              <ItemsGrid
+                items={items || []}
+                loading={loadingItems}
+                searchQuery={searchQuery}
+                categoryName={selectedSubCategory}
+                onAddToCart={addToCart}
+                skeletonCount={6}
+                notFoundTitle="No items"
+                notFoundMessage="No items available for this category."
+              />
+            </TransitionContainer>
+          </ContentWrapper>
         </PageContainer>
 
-        {/* Change back to conditional rendering */}
-        {cart.length > 0 && (
-          <FloatingCheckout>
-            <CheckoutButton 
-              onClick={() => navigate('/checkout')}
-              className="checkout-pulse"
-            >
-              <CheckoutContent>
-                <CartIconWrapper>
-                  <ShoppingCartIcon />
-                  {getTotalItems() > 0 && (
-                    <CartBadge>{getTotalItems()}</CartBadge>
-                  )}
-                </CartIconWrapper>
-                <CheckoutText>
-                  <CheckoutLabel>Checkout</CheckoutLabel>
-                  <CheckoutPrice>{getTotalPrice().toFixed(2)}BD</CheckoutPrice>
-                </CheckoutText>
-              </CheckoutContent>
-            </CheckoutButton>
-          </FloatingCheckout>
-        )}
+        <FloatingCartButton
+          show={cart.length > 0}
+          itemCount={getTotalItems()}
+          totalPrice={getTotalPrice()}
+          currency="BD"
+          label="Checkout"
+          onClick={() => navigate('/checkout')}
+          animate={true}
+        />
       </PageWrapper>
     </>
   )
@@ -406,7 +314,10 @@ const PageWrapper = styled.div`
   position: relative;
   min-height: 100%;
   color: white;
+  overflow-x: hidden;
+  width: 100%;
 `
+
 const BackgroundImage = styled.div`
   position: relative;
   top: 0;
@@ -434,192 +345,6 @@ const BackgroundImage = styled.div`
   }
 `
 
-const FilterRow = styled.div`
-  display: flex;
-  gap: 10px;
-  margin: 16px;
-`
-
-const FilterButton = styled.button`
-  background-color: ${({ $active }) => ($active ? '#fff' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#000' : '#fff')};
-  border: 3px solid #fff;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  height: 10%;
-`
-const Title = styled.div`
-  font-size: 32px;
-  font-family: 'Rubik', sans-serif;
-  margin: 0px 16px;
-`
-const Location = styled.p`
-  font-size: 14px;
-  font-family: 'Rubik', sans-serif;
-  margin: 0px 16px;
-`
-const CardList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  margin: 16px;
-  
-  @media (min-width: 769px) {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 24px;
-    margin: 24px;
-  }
-`
-
-const CategoryCard = styled.div`
-  position: relative;
-  height: 130px;
-  border-radius: 40px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.2s;
-  
-  @media (min-width: 769px) {
-    height: 200px;
-    
-    &:hover {
-      transform: scale(1.05);
-    }
-  }
-`
-
-const Overlay = styled.div`
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-`
-
-const CategoryName = styled.h2`
-  font-family: 'Rubik', sans-serif;
-  font-size: 28px;
-  text-transform: uppercase;
-  color: white;
-  position: relative;
-  z-index: 1;
-  
-  @media (min-width: 769px) {
-    font-size: 36px;
-  }
-`
-
-const ItemsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 20px;
-  gap: 20px;
-`
-
-const FloatingCheckout = styled.div`
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
-
-  .checkout-pulse {
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
-    }
-    70% {
-      box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
-    }
-  }
-`
-
-const CheckoutButton = styled.button`
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-  border: none;
-  border-radius: 25px;
-  padding: 16px 24px;
-  cursor: pointer;
-  box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
-  transition: all 0.3s ease;
-  min-width: 140px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 35px rgba(255, 152, 0, 0.4);
-    background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`
-
-const CheckoutContent = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: white;
-`
-
-const CartIconWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-  
-  svg {
-    font-size: 24px;
-  }
-`
-
-const CartBadge = styled.div`
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #d32f2f;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  min-width: 20px;
-`
-
-const CheckoutText = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-`
-
-const CheckoutLabel = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-`
-
-const CheckoutPrice = styled.span`
-  font-size: 16px;
-  font-weight: bold;
-  line-height: 1;
-  margin-top: 2px;
-`
-
 const SearchContainer = styled.div`
   margin: 16px;
 `
@@ -643,39 +368,57 @@ const SearchInput = styled.input`
   }
 `
 
-const BackButton = styled.button`
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ff9800;
-  border: none;
-  border-radius: 12px;
-  padding: 12px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
+const ContentWrapper = styled.div`
+  position: relative;
+  min-height: 300px;
+`
 
-  &:hover {
-    background: rgba(255, 152, 0, 0.2);
-  }
+const TransitionContainer = styled.div`
+  position: ${props => props.$show ? 'relative' : 'absolute'};
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: ${props => props.$show ? 1 : 0};
+  transform: translateX(${props => props.$show ? '0' : '30px'});
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: ${props => props.$show ? 'auto' : 'none'};
+  visibility: ${props => props.$show ? 'visible' : 'hidden'};
+  
+  ${props => !props.$show && `
+    max-height: 0;
+    overflow: hidden;
+  `}
 `
 
 const MenuButton = styled.button`
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
+  z-index: 2001;
+  background: rgba(0, 0, 0, 0.8);
   color: #ff9800;
   border: none;
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
-    background: rgba(255, 152, 0, 0.2);
+    background: rgba(255, 152, 0, 0.3);
+  }
+  
+  @media (max-width: 768px) {
+    right: 12px;
+    top: 12px;
   }
 `
+

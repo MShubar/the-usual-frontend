@@ -177,6 +177,9 @@ const StyledModal = styled(Modal)`
     background-color: #181818;
     border-top: 2px solid #222;
     padding: 18px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
   }
 `
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import styled from 'styled-components'
 import { Modal } from 'antd'
 import 'antd/dist/reset.css'
@@ -11,12 +11,12 @@ import OatImg from '../assets/options/Oat.svg'
 import OneShotImg from '../assets/options/OneShot.svg'
 import RegularImg from '../assets/options/Regular.svg'
 import SmallImg from '../assets/options/Small.svg'
-import SoyImg from '../assets/options/Soy.jpg'
 import ThreeShotImg from '../assets/options/ThreeShot.svg'
 import TwoShotImg from '../assets/options/TwoShot.svg'
-import XLImg from '../assets/options/XL.jpg'
 import Sprite from '../assets/options/Sprite.svg'
 import Redbull from '../assets/options/Redbull.svg'
+import { LazyLoadImage } from 'react-lazy-load-image-component'
+import 'react-lazy-load-image-component/src/effects/blur.css'
 
 const optionImages = {
   Almond: AlmondImg,
@@ -26,10 +26,8 @@ const optionImages = {
   OneShot: OneShotImg,
   Regular: RegularImg,
   Small: SmallImg,
-  Soy: SoyImg,
   ThreeShot: ThreeShotImg,
   TwoShot: TwoShotImg,
-  XL: XLImg,
   Sprite: Sprite,
   Redbull: Redbull
 }
@@ -163,11 +161,35 @@ function ItemCard({ id, name, description, price, image, cat, options = {}, onAd
     </AddButton>
   ]
 
+  // Notify app when this modal opens/closes
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('item-modal-toggle', { detail: { open: modalVisible } }))
+    return () => {
+      // Ensure we reset on unmount
+      window.dispatchEvent(new CustomEvent('item-modal-toggle', { detail: { open: false } }))
+    }
+  }, [modalVisible])
+
   return (
     <>
       <Card onClick={openModal}>
         <ImageContainer>
-          <ProductImage src={image} alt={name} loading="lazy" />
+          <LazyLoadImage
+            src={image}
+            alt={name}
+            effect="blur"
+            width="100%"
+            height="100%"
+            threshold={100}
+            placeholder={<ImagePlaceholder />}
+            style={{
+              objectFit: 'cover',
+              display: 'block'
+            }}
+            wrapperProps={{
+              style: { width: '100%', height: '100%' }
+            }}
+          />
         </ImageContainer>
         <Content>
           <Title>{name}</Title>
@@ -190,7 +212,25 @@ function ItemCard({ id, name, description, price, image, cat, options = {}, onAd
         footer={modalFooter}
         centered
       >
-        <ModalImage src={image} alt={name} />
+        <ModalImageWrapper>
+          <LazyLoadImage
+            src={image}
+            alt={name}
+            effect="blur"
+            width="100%"
+            height="100%"
+            threshold={50}
+            placeholder={<ImagePlaceholder />}
+            style={{
+              objectFit: 'cover',
+              borderRadius: '8px',
+              display: 'block'
+            }}
+            wrapperProps={{
+              style: { width: '100%', height: '100%' }
+            }}
+          />
+        </ModalImageWrapper>
         {Object.values(options).every((arr) => !arr || arr.length === 0) && (
           <div style={{ color: '#aaa', marginBottom: 16 }}>
             No customization options available for this item.
@@ -264,6 +304,17 @@ const DarkModal = styled(Modal)`
     justify-content: flex-end;
     gap: 12px;
   }
+  
+  /* Lower z-index to stay below fixed buttons */
+  z-index: 999 !important;
+  
+  .ant-modal-wrap {
+    z-index: 999 !important;
+  }
+  
+  .ant-modal-mask {
+    z-index: 998 !important;
+  }
 `
 
 const Card = styled.div`
@@ -291,22 +342,46 @@ const Card = styled.div`
   }
 `
 
+const ImagePlaceholder = styled.div`
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+`
+
 const ImageContainer = styled.div`
   height: 200px;
   overflow: hidden;
   background: #1a1a1a;
   border-radius: 25px;
   
+  .lazy-load-image-background {
+    width: 100%;
+    height: 100%;
+  }
+  
   @media (min-width: 769px) {
     height: 250px;
   }
 `
 
-const ProductImage = styled.img`
+const ModalImageWrapper = styled.div`
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  will-change: transform; /* GPU acceleration */
+  max-height: 200px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  
+  .lazy-load-image-background {
+    width: 100%;
+    height: 100%;
+  }
 `
 
 const Content = styled.div`
@@ -350,15 +425,6 @@ const OptionGroup = styled.div`
     margin-bottom: 8px;
     color: white;
   }
-`
-
-const ModalImage = styled.img`
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  will-change: transform; /* GPU acceleration */
 `
 
 const OptionsContainer = styled.div`

@@ -14,8 +14,49 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
-// For development only - use test phone numbers
-// Go to Firebase Console → Authentication → Phone → Add test phone number
-// Example: +1 650-555-3434 with code 123456
+// Auto-enable test mode on localhost to bypass reCAPTCHA 401 errors
+// In test mode, SMS is NOT sent; use Firebase Console test phone numbers
+let isAppVerificationDisabled = false
+try {
+  const isLocalhost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(window.location.host)
+  if (isLocalhost && auth?.settings) {
+    auth.settings.appVerificationDisabledForTesting = true
+    isAppVerificationDisabled = true
+    console.warn('[Firebase] Test mode enabled on localhost. SMS will NOT be sent. Use Firebase Console test phone numbers.')
+    console.warn('[Firebase] Add test numbers: Console → Authentication → Sign-in method → Phone → Add phone numbers for testing')
+  }
+} catch (_) {
+  // ignore
+}
 
-export { app, auth }
+// Helper to enable test mode at runtime (call this in dev to skip SMS and use Firebase test phone numbers)
+export function enablePhoneAuthTestMode(reason = 'manual') {
+  try {
+    if (auth?.settings) {
+      auth.settings.appVerificationDisabledForTesting = true
+      isAppVerificationDisabled = true
+      console.warn(`[Firebase] Test mode enabled (${reason}). SMS will NOT be sent. Use Firebase Console test phone numbers/codes.`)
+      return true
+    }
+  } catch (_) {
+    // ignore
+  }
+  return false
+}
+
+// Helper to disable test mode and send real SMS
+export function disablePhoneAuthTestMode() {
+  try {
+    if (auth?.settings) {
+      auth.settings.appVerificationDisabledForTesting = false
+      isAppVerificationDisabled = false
+      console.log('[Firebase] Test mode disabled. SMS will be sent.')
+      return true
+    }
+  } catch (_) {
+    // ignore
+  }
+  return false
+}
+
+export { app, auth, firebaseConfig, isAppVerificationDisabled }

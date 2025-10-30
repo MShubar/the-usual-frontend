@@ -9,9 +9,8 @@ import ReceiptIcon from '@mui/icons-material/Receipt'
 function OrderConfirmation() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { orderType, total, paymentMethod, orderNumber } = location.state || {}
+  const { total, paymentMethod, orderNumber } = location.state || {}
   
-  const [currentTime, setCurrentTime] = useState(new Date())
   const [estimatedTime, setEstimatedTime] = useState(new Date())
 
   useEffect(() => {

@@ -1,27 +1,47 @@
 import React from 'react'
 import styled from 'styled-components'
 
-function BackButton() {
-  const handleBack = () => {
-    window.history.back()
-  }
+function BackButton({ 
+  onClick, 
+  label = '← Back',
+  show = true,
+  position = { top: 16, left: 16 }
+}) {
+  if (!show) return null
 
-  return <Button onClick={handleBack}>← Back</Button>
+  return (
+    <Button onClick={onClick} $position={position}>
+      {label}
+    </Button>
+  )
 }
 
 export default BackButton
 
 const Button = styled.button`
-  background: transparent;
+  position: fixed;
+  top: ${({ $position }) => $position.top}px;
+  left: ${({ $position }) => $position.left}px;
+  z-index: 2001;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ff9800;
   border: none;
-  color: #3498db;
-  font-size: 1rem;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: background-color 0.2s ease;
+  transition: background 0.2s;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  height: 48px;
 
   &:hover {
-    background-color: #e1eaff;
+    background: rgba(255, 152, 0, 0.3);
   }
 `

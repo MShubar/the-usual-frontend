@@ -9,9 +9,12 @@ import LocalAtmIcon from '@mui/icons-material/LocalAtm'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import EditIcon from '@mui/icons-material/Edit'
 import AddressModal from '../components/AddressModal'
+import PhoneInputModal from '../components/PhoneInputModal'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import BackButton from '../components/BackButton'
+import { API_BACKEND } from './API'
 
 // Fix for default markers in React Leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -28,10 +31,19 @@ function OrderDetails() {
   
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [showAddressModal, setShowAddressModal] = useState(false)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phone, setPhone] = useState(() => {
+    try {
+      return localStorage.getItem('userPhone') || ''
+    } catch {
+      return ''
+    }
+  })
   const [savedAddress, setSavedAddress] = useState(() => {
     const saved = localStorage.getItem('deliveryAddress')
     return saved ? JSON.parse(saved) : null
   })
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
 
   const handleSaveAddress = (address) => {
     setSavedAddress(address)
@@ -50,26 +62,127 @@ function OrderDetails() {
       return
     }
     
-    const orderNumber = Math.floor(Math.random() * 10000)
+    // Show phone modal if no phone number is saved
+    if (!phone) {
+      setShowPhoneModal(true)
+      return
+    }
     
-    // For both pickup and delivery orders, go to confirmation page
-    localStorage.removeItem('cart')
-    navigate('/order-confirmation', {
-      state: {
-        orderType,
-        total,
-        paymentMethod,
-        orderNumber,
-        address: savedAddress
+    proceedWithOrder()
+  }
+
+  const handlePhoneSubmit = () => {
+    let formattedPhone = phone.trim()
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+973' + formattedPhone
+    }
+
+    try {
+      localStorage.setItem('userPhone', phone)
+      localStorage.setItem('userId', formattedPhone)
+    } catch (error) {
+      console.error('Error saving user info:', error)
+    }
+
+    setShowPhoneModal(false)
+    proceedWithOrder()
+  }
+
+  const createOrder = async (orderData) => {
+    try {
+      const response = await fetch(`${API_BACKEND}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || `HTTP error! status: ${response.status}`)
       }
-    })
+
+      return result
+    } catch (error) {
+      console.error('Error creating order:', error)
+      throw error
+    }
+  }
+
+  const proceedWithOrder = async () => {
+    setIsPlacingOrder(true)
+    
+    try {
+      let formattedPhone = phone.trim()
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+973' + formattedPhone
+      }
+
+      const orderData = {
+        orderType: orderType,
+        total: total,
+        paymentMethod: paymentMethod,
+        deliveryAddress: orderType === 'delivery' ? savedAddress : null,
+        userId: formattedPhone,
+        items: cartItems.map(item => ({
+          id: item.id,
+          name: item.name || `Item #${item.id}`,
+          image: item.image || null,
+          description: item.description || '',
+          quantity: item.quantity,
+          price: item.price,
+          customizations: {
+            size: item.size || null,
+            milk: item.milk || null,
+            shots: item.shots || null,
+            mixer: item.mixer || null
+          }
+        }))
+      }
+
+      const orderResponse = await createOrder(orderData)
+      
+      localStorage.removeItem('cart')
+      navigate('/order-confirmation', {
+        state: {
+          orderType,
+          total,
+          paymentMethod,
+          orderNumber: orderResponse.orderNumber || orderResponse.id || 'PENDING',
+          address: savedAddress,
+          success: true
+        }
+      })
+    } catch (error) {
+      console.error('Failed to place order:', error)
+      alert('Failed to place order. Please try again.')
+      
+      // Fallback: still navigate with local order number
+      const fallbackOrderNumber = `LOCAL-${Date.now()}`
+      localStorage.removeItem('cart')
+      navigate('/order-confirmation', {
+        state: {
+          orderType,
+          total,
+          paymentMethod,
+          orderNumber: fallbackOrderNumber,
+          address: savedAddress,
+          error: error.message || 'Order placed locally - backend unavailable'
+        }
+      })
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   return (
     <PageContainer>
-      <BackButton onClick={() => navigate(-1)}>
-        ← Back
-      </BackButton>
+      <BackButton 
+        show={!showAddressModal && !showPhoneModal} 
+        onClick={() => navigate(-1)} 
+      />
 
       <Header>
         <HeaderContent>
@@ -208,8 +321,8 @@ function OrderDetails() {
         </Section>
 
         {/* Place Order Button */}
-        <PlaceOrderButton onClick={handlePlaceOrder}>
-          Place Order • {total.toFixed(2)}BD
+        <PlaceOrderButton onClick={handlePlaceOrder} disabled={isPlacingOrder}>
+          {isPlacingOrder ? 'Placing Order...' : `Place Order • ${total.toFixed(2)}BD`}
         </PlaceOrderButton>
       </Content>
 
@@ -218,6 +331,17 @@ function OrderDetails() {
         onClose={() => setShowAddressModal(false)}
         onSave={handleSaveAddress}
         initialAddress={savedAddress}
+      />
+
+      <PhoneInputModal
+        open={showPhoneModal}
+        onClose={() => setShowPhoneModal(false)}
+        phone={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        onSubmit={handlePhoneSubmit}
+        title="Enter Phone Number"
+        placeholder="Enter phone number (e.g., 39970100)"
+        buttonText="Continue"
       />
     </PageContainer>
   )
@@ -230,24 +354,6 @@ const PageContainer = styled.div`
   color: white;
   min-height: 100vh;
   padding-bottom: 20px;
-`
-
-const BackButton = styled.button`
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 16px;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.7);
-  }
 `
 
 const Header = styled.div`
@@ -514,6 +620,12 @@ const PlaceOrderButton = styled.button`
 
   &:active {
     transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
   
   @media (max-width: 768px) {
