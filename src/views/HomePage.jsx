@@ -318,10 +318,6 @@ const PageWrapper = styled.div`
   width: 100%;
   background: #000;
   
-  /* Extend black background into notch/safe areas */
-  padding-top: 0;
-  margin-top: 0;
-  
   /* Ensure notch area is black */
   &::before {
     content: '';
@@ -345,8 +341,10 @@ const BackgroundImage = styled.div`
   background-image: url(${Logo});
   background-size: cover;
   background-position: center;
-  z-index: -1;
-  margin-top: env(safe-area-inset-top);
+  z-index: 0;
+  
+  /* Add padding at top for notch instead of margin */
+  padding-top: env(safe-area-inset-top);
   
   &::after {
     content: '';
