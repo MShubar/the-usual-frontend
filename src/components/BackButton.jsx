@@ -20,8 +20,8 @@ export default BackButton
 
 const Button = styled.button`
   position: fixed;
-  top: ${({ $position }) => $position.top}px;
-  left: ${({ $position }) => $position.left}px;
+  top: calc(${({ $position }) => $position.top}px + env(safe-area-inset-top));
+  left: calc(${({ $position }) => $position.left}px + env(safe-area-inset-left));
   z-index: 2001;
   background: rgba(0, 0, 0, 0.8);
   color: #ff9800;

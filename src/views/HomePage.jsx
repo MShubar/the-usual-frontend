@@ -312,10 +312,14 @@ const PageContainer = styled.div`
 `
 const PageWrapper = styled.div`
   position: relative;
-  min-height: 100%;
+  min-height: 100vh;
   color: white;
   overflow-x: hidden;
   width: 100%;
+  background: #000;
+  
+  /* Ensure background extends into safe areas */
+  padding-top: env(safe-area-inset-top);
 `
 
 const BackgroundImage = styled.div`
@@ -392,8 +396,8 @@ const TransitionContainer = styled.div`
 
 const MenuButton = styled.button`
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
   z-index: 2001;
   background: rgba(0, 0, 0, 0.8);
   color: #ff9800;
@@ -417,8 +421,8 @@ const MenuButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    right: 12px;
-    top: 12px;
+    right: calc(12px + env(safe-area-inset-right));
+    top: calc(12px + env(safe-area-inset-top));
   }
 `
 

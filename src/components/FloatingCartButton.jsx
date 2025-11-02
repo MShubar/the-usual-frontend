@@ -63,14 +63,26 @@ const Container = styled.div`
 `
 
 const Button = styled.button`
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) ${props => props.$show ? 'translateY(0)' : 'translateY(150%)'};
+  z-index: 1000;
   background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
   border: none;
-  border-radius: 25px;
-  padding: 16px 24px;
+  border-radius: 50px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
-  transition: all 0.3s ease;
-  min-width: 140px;
+  box-shadow: 0 8px 32px rgba(255, 152, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  justify-content: space-between;
 
   &:hover {
     transform: translateY(-2px);
