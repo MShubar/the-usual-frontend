@@ -318,8 +318,22 @@ const PageWrapper = styled.div`
   width: 100%;
   background: #000;
   
-  /* Ensure background extends into safe areas */
-  padding-top: env(safe-area-inset-top);
+  /* Extend black background into notch/safe areas */
+  padding-top: 0;
+  margin-top: 0;
+  
+  /* Ensure notch area is black */
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: #000;
+    z-index: 9999;
+    pointer-events: none;
+  }
 `
 
 const BackgroundImage = styled.div`
@@ -332,6 +346,7 @@ const BackgroundImage = styled.div`
   background-size: cover;
   background-position: center;
   z-index: -1;
+  margin-top: env(safe-area-inset-top);
   
   &::after {
     content: '';
@@ -398,7 +413,7 @@ const MenuButton = styled.button`
   position: fixed;
   top: calc(16px + env(safe-area-inset-top));
   right: calc(16px + env(safe-area-inset-right));
-  z-index: 2001;
+  z-index: 10000;
   background: rgba(0, 0, 0, 0.8);
   color: #ff9800;
   border: none;
