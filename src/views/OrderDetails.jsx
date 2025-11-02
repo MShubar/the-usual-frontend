@@ -8,12 +8,11 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import LocalAtmIcon from '@mui/icons-material/LocalAtm'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import EditIcon from '@mui/icons-material/Edit'
-import AddressModal from '../components/AddressModal'
-import PhoneInputModal from '../components/PhoneInputModal'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import BackButton from '../components/BackButton'
+import PhoneInputModal from '../components/PhoneInputModal'
 import { API_BACKEND } from './API'
 
 // Fix for default markers in React Leaflet
@@ -30,7 +29,6 @@ function OrderDetails() {
   const { orderType = 'delivery', cartItems = [], total = 0 } = location.state || {}
   
   const [paymentMethod, setPaymentMethod] = useState('card')
-  const [showAddressModal, setShowAddressModal] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [phone, setPhone] = useState(() => {
     try {
@@ -180,7 +178,7 @@ function OrderDetails() {
   return (
     <PageContainer>
       <BackButton 
-        show={!showAddressModal && !showPhoneModal} 
+        show={!showPhoneModal} 
         onClick={() => navigate(-1)} 
       />
 
@@ -218,7 +216,7 @@ function OrderDetails() {
                         <AddressInstructions>{savedAddress.instructions}</AddressInstructions>
                       )}
                     </LocationText>
-                    <EditButton onClick={() => setShowAddressModal(true)}>
+                    <EditButton onClick={() => navigate('/address')}>
                       <EditIcon />
                       Edit
                     </EditButton>
@@ -244,7 +242,7 @@ function OrderDetails() {
                   )}
                 </>
               ) : (
-                <SelectAddressButton onClick={() => setShowAddressModal(true)}>
+                <SelectAddressButton onClick={() => navigate('/address')}>
                   <LocationOnIcon />
                   Select Delivery Address
                 </SelectAddressButton>
@@ -326,13 +324,6 @@ function OrderDetails() {
         </PlaceOrderButton>
       </Content>
 
-      <AddressModal
-        isOpen={showAddressModal}
-        onClose={() => setShowAddressModal(false)}
-        onSave={handleSaveAddress}
-        initialAddress={savedAddress}
-      />
-
       <PhoneInputModal
         open={showPhoneModal}
         onClose={() => setShowPhoneModal(false)}
@@ -353,7 +344,7 @@ const PageContainer = styled.div`
   background: #000;
   color: white;
   min-height: 100vh;
-  padding-bottom: 20px;
+  margin-bottom: 10px;
 `
 
 const Header = styled.div`

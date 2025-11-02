@@ -32,7 +32,7 @@ function OrderTypeSelector({
 export default OrderTypeSelector
 
 const OrderTypeSection = styled.div`
-  background: #111;
+  background: #181818;
   border-radius: 16px;
   padding: 16px;
   

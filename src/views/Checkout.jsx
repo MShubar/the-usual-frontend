@@ -53,6 +53,21 @@ function Checkout() {
     }
   }, [])
 
+  // Listen for cart updates from other components
+  useEffect(() => {
+    const handleCartUpdate = (event) => {
+      try {
+        const savedCart = localStorage.getItem('cart')
+        setCartItems(savedCart ? JSON.parse(savedCart) : [])
+      } catch {
+        setCartItems([])
+      }
+    }
+
+    window.addEventListener('cart-updated', handleCartUpdate)
+    return () => window.removeEventListener('cart-updated', handleCartUpdate)
+  }, [])
+
   // Only create the fetch hook if userId exists
   const shouldFetchOrders = Boolean(userId)
   
@@ -89,6 +104,8 @@ function Checkout() {
     const updatedCart = cartItems.filter((item) => item.id !== itemId)
     setCartItems(updatedCart)
     localStorage.setItem('cart', JSON.stringify(updatedCart))
+    // Notify HomePage about cart update
+    window.dispatchEvent(new CustomEvent('cart-updated'))
   }
 
   const updateQuantity = (itemId, newQuantity) => {
@@ -101,6 +118,8 @@ function Checkout() {
     )
     setCartItems(updatedCart)
     localStorage.setItem('cart', JSON.stringify(updatedCart))
+    // Notify HomePage about cart update
+    window.dispatchEvent(new CustomEvent('cart-updated'))
   }
 
   const clearCart = () => {
@@ -111,6 +130,8 @@ function Checkout() {
     setCartItems([])
     localStorage.removeItem('cart')
     setShowClearCartModal(false)
+    // Notify HomePage about cart update
+    window.dispatchEvent(new CustomEvent('cart-updated'))
   }
 
   const subtotal = cartItems.reduce(
@@ -367,10 +388,10 @@ const PageContainer = styled.div`
   background: #000;
   color: white;
   min-height: 100vh;
-  padding-bottom: 20px;
   overflow-x: hidden;
   width: 100%;
   position: relative;
+  padding-bottom: 10px;
 `
 
 const Content = styled.div`

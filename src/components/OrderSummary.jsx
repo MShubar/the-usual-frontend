@@ -50,7 +50,7 @@ function OrderSummary({
 export default OrderSummary
 
 const Container = styled.div`
-  background: #111;
+  background: #181818;
   border-radius: 16px;
   padding: 16px;
   border: 1px solid #333;

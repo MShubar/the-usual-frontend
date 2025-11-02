@@ -25,7 +25,7 @@ try {
     console.warn('[Firebase] Test mode enabled on localhost. SMS will NOT be sent. Use Firebase Console test phone numbers.')
     console.warn('[Firebase] Add test numbers: Console → Authentication → Sign-in method → Phone → Add phone numbers for testing')
   }
-} catch (_) {
+} catch {
   // ignore
 }
 
@@ -38,7 +38,7 @@ export function enablePhoneAuthTestMode(reason = 'manual') {
       console.warn(`[Firebase] Test mode enabled (${reason}). SMS will NOT be sent. Use Firebase Console test phone numbers/codes.`)
       return true
     }
-  } catch (_) {
+  } catch {
     // ignore
   }
   return false
@@ -53,7 +53,7 @@ export function disablePhoneAuthTestMode() {
       console.log('[Firebase] Test mode disabled. SMS will be sent.')
       return true
     }
-  } catch (_) {
+  } catch {
     // ignore
   }
   return false

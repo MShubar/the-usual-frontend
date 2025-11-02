@@ -88,7 +88,7 @@ function Orders() {
       }
       const data = await response.json()
       // const duration = performance.now() - startTime
-      // console.log(`Orders API took ${duration.toFixed(2)}ms`)
+      
       
       // Update cache with fresh data
       cacheManager.set(cacheKey, data)

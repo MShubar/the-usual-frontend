@@ -14,6 +14,7 @@ import CategoryGrid from '../components/CategoryGrid'
 import ItemsGrid from '../components/ItemsGrid'
 import FloatingCartButton from '../components/FloatingCartButton'
 import useFetch from '../hooks/useFetch'
+import SearchBar from '../components/SearchBar'
 
 function HomePage() {
   const [mainCategory, setMainCategory] = useState("")
@@ -35,6 +36,7 @@ function HomePage() {
 
   const pageContainerRef = useRef(null)
   const lastScrollTop = useRef(0)
+  const savedScrollRef = useRef({ winY: 0, contY: 0 })
 
   // Fetch categories with caching
   const {
@@ -131,6 +133,69 @@ function HomePage() {
     return () => container.removeEventListener('scroll', onScroll)
   }, [fetchCategories])
 
+  // Prevent window/container scroll jump when opening/closing drawer (no navigation)
+  useEffect(() => {
+    const container = pageContainerRef.current
+
+    const saveScroll = () => {
+      savedScrollRef.current.winY =
+        window.pageYOffset ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0
+      savedScrollRef.current.contY = container?.scrollTop || 0
+    }
+
+    const restoreScroll = () => {
+      // Restore window first
+      window.scrollTo({ top: savedScrollRef.current.winY, behavior: 'auto' })
+      // Restore container after layout settles
+      if (container) {
+        requestAnimationFrame(() => {
+          container.scrollTo({ top: savedScrollRef.current.contY, behavior: 'auto' })
+        })
+      }
+    }
+
+    if (isDrawerOpen) {
+      // Save current positions
+      saveScroll()
+      // Lock body to prevent background scroll and jumping
+      const y = savedScrollRef.current.winY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${y}px`
+      document.body.style.left = '0'
+      document.body.style.right = '0'
+      document.body.style.width = '100%'
+    } else {
+      // Unlock and restore after closing
+      const top = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      document.body.style.width = ''
+      if (top) {
+        // Restore window scroll
+        const y = -parseInt(top, 10) || 0
+        window.scrollTo({ top: y, behavior: 'auto' })
+      }
+      // Restore container scroll as well
+      restoreScroll()
+      // Double-restore to cover transitions/layout shifts
+      setTimeout(restoreScroll, 0)
+    }
+
+    return () => {
+      // Cleanup in case component unmounts while locked
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      document.body.style.width = ''
+    }
+  }, [isDrawerOpen])
+
   const getTotalItems = () => {
     return cart.reduce((total, item) => total + item.quantity, 0)
   }
@@ -148,28 +213,59 @@ function HomePage() {
         return cartItemKey === itemKey;
       });
 
+      let newCart;
       if (existingItem) {
-        const newCart = prevCart.map(cartItem => {
+        newCart = prevCart.map(cartItem => {
           const cartItemKey = `${cartItem.id}-${cartItem.size || ''}-${cartItem.milk || ''}-${cartItem.shots || ''}-${cartItem.mixer || ''}`;
           return cartItemKey === itemKey
             ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
             : cartItem;
         });
-        return newCart;
       } else {
-        const newCart = [...prevCart, { ...item }];
-        return newCart;
+        newCart = [...prevCart, { ...item }];
       }
+      return newCart;
     });
   };
 
   useEffect(() => {
     try {
       localStorage.setItem('cart', JSON.stringify(cart))
+      // Dispatch custom event to notify other components about cart update
+      window.dispatchEvent(new CustomEvent('cart-updated', { detail: { cart } }))
     } catch (error) {
       console.error('Error saving cart to localStorage:', error)
     }
   }, [cart])
+
+  // Listen for cart updates from other components (like when navigating back from checkout)
+  useEffect(() => {
+    const handleCartUpdate = (event) => {
+      try {
+        const savedCart = localStorage.getItem('cart')
+        const parsedCart = savedCart ? JSON.parse(savedCart) : []
+        
+        // Only update if cart actually changed to prevent infinite loop
+        setCart(prevCart => {
+          const prevCartString = JSON.stringify(prevCart)
+          const newCartString = JSON.stringify(parsedCart)
+          
+          if (prevCartString !== newCartString) {
+            return parsedCart
+          }
+          return prevCart
+        })
+      } catch (error) {
+        console.error('Error loading cart from localStorage:', error)
+      }
+    }
+
+    window.addEventListener('cart-updated', handleCartUpdate)
+    
+    return () => {
+      window.removeEventListener('cart-updated', handleCartUpdate)
+    }
+  }, [])
 
   const handleCategorySelect = (cat) => {
     setMainCategory(cat)
@@ -217,7 +313,15 @@ function HomePage() {
         
         {!isItemModalOpen && (
           <MenuButton 
-            onClick={() => setIsDrawerOpen(prev => !prev)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation?.()
+              // Tell ScrollToTop (App.jsx) to ignore this UI interaction
+              window.dispatchEvent(new CustomEvent('suppress-scroll-top', { detail: { ttl: 800 } }))
+              // Toggle drawer
+              setIsDrawerOpen(prev => !prev)
+            }}
             $hasBackButton={selectedSubCategory}
           >
             <MenuIcon />
@@ -250,14 +354,10 @@ function HomePage() {
             onCategorySelect={handleCategorySelect}
           />
 
-          <SearchContainer>
-            <SearchInput
-              type="text"
-              placeholder="Search"
+            <SearchBar
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </SearchContainer>
 
           <ContentWrapper>
             <TransitionContainer $show={!selectedSubCategory}>
@@ -296,6 +396,7 @@ function HomePage() {
           onClick={() => navigate('/checkout')}
           animate={true}
         />
+        
       </PageWrapper>
     </>
   )
@@ -362,28 +463,6 @@ const BackgroundImage = styled.div`
   }
 `
 
-const SearchContainer = styled.div`
-  margin: 16px;
-`
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 20px;
-  border: none;
-  background: #222;
-  color: white;
-  font-size: 16px;
-
-  &::placeholder {
-    color: #888;
-  }
-
-  &:focus {
-    outline: none;
-    border: 2px solid #ff9800;
-  }
-`
 
 const ContentWrapper = styled.div`
   position: relative;
@@ -407,7 +486,7 @@ const TransitionContainer = styled.div`
   `}
 `
 
-const MenuButton = styled.button`
+const MenuButton = styled.button.attrs({ type: 'button' })`
   position: fixed;
   top: calc(16px + env(safe-area-inset-top));
   right: calc(16px + env(safe-area-inset-right));

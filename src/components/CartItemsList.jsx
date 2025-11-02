@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ClearAllIcon from '@mui/icons-material/ClearAll'
@@ -16,6 +16,10 @@ function CartItemsList({
     return null
   }
 
+  // Show 2 items initially, and reveal 5 more on each click
+  const [visibleCount, setVisibleCount] = useState(2)
+  const displayedItems = items.slice(0, visibleCount)
+
   return (
     <CartSection>
       <CartHeader>
@@ -28,40 +32,50 @@ function CartItemsList({
         )}
       </CartHeader>
       <CartList>
-        {items.map((item, index) => (
+        {displayedItems.map((item, index) => (
           <CartItem key={`${item.id}-${index}`}>
             <ItemImage src={item.image} alt={item.name} />
-            <ItemDetails>
+            <ItemInfo>
+              <NameRow>
               <ItemName>{item.name}</ItemName>
+              <DeleteButton onClick={() => onRemoveItem(item.id)}>
+                <DeleteIcon style={{fontSize: "20px"}} />
+              </DeleteButton>
+              </NameRow>
               <ItemCustomizations>
                 {item.size && <Customization>Size: {item.size}</Customization>}
                 {item.milk && <Customization>Milk: {item.milk}</Customization>}
                 {item.shots && <Customization>Shots: {item.shots}</Customization>}
                 {item.mixer && <Customization>Mixer: {item.mixer}</Customization>}
               </ItemCustomizations>
-              <ItemPrice>{item.price.toFixed(2)}{currency} each</ItemPrice>
-            </ItemDetails>
-            <QuantityControls>
-              <QuantityButton
-                onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                disabled={item.quantity <= 1}
-              >
-                -
-              </QuantityButton>
-              <QuantityDisplay>{item.quantity}</QuantityDisplay>
-              <QuantityButton
-                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-              >
-                +
-              </QuantityButton>
-            </QuantityControls>
-            <ItemTotal>{(item.price * item.quantity).toFixed(2)}{currency}</ItemTotal>
-            <DeleteButton onClick={() => onRemoveItem(item.id)}>
-              <DeleteIcon />
-            </DeleteButton>
+              <Actions>
+              <ItemTotal>
+               {(item.price * item.quantity).toFixed(3)} BHD
+              </ItemTotal>
+              <QuantityControl>
+                <QtyButton
+                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                  disabled={item.quantity <= 1}
+                >−</QtyButton>
+                <QtyDisplay>{item.quantity}</QtyDisplay>
+                <QtyButton
+                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                >+</QtyButton>
+              </QuantityControl>
+            </Actions>
+            </ItemInfo>
+            
           </CartItem>
         ))}
       </CartList>
+
+      {visibleCount < items.length && (
+        <ShowMoreWrapper>
+          <ShowMoreButton onClick={() => setVisibleCount(c => Math.min(c + 5, items.length))}>
+            Show more
+          </ShowMoreButton>
+        </ShowMoreWrapper>
+      )}
     </CartSection>
   )
 }
@@ -69,7 +83,7 @@ function CartItemsList({
 export default CartItemsList
 
 const CartSection = styled.div`
-  background: #111;
+  background: #181818;
   border-radius: 16px;
   padding: 16px;
     
@@ -91,13 +105,25 @@ const CartHeader = styled.div`
   }
 `
 
+const SectionTitle = styled.h2`
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+  color: #ff9800;
+  
+  @media (max-width: 768px) {
+    font-size: 18px;
+    margin: 0 0 12px 0;
+  }
+`
+
 const ClearAllButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #333;
+  background: #222;
   color: #ff9800;
-  border: 1px solid #555;
+  border: 1px solid #444;
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -105,8 +131,9 @@ const ClearAllButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background: #444;
+    background: #333;
     border-color: #ff9800;
+    color: #fff;
   }
   
   svg {
@@ -124,74 +151,49 @@ const ClearAllButton = styled.button`
   }
 `
 
-const SectionTitle = styled.h2`
-  font-size: 20px;
-  font-weight: bold;
-  margin: 0 0 16px 0;
-  color: #ff9800;
-  
-  @media (max-width: 768px) {
-    font-size: 18px;
-    margin: 0 0 12px 0;
-  }
-`
-
 const CartList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
 `
 
 const CartItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: #1a1a1a;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px;
-  }
+  background: #222;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px #0004;
+  width: 90%; 
+  gap: 16px;
 `
 
 const ItemImage = styled.img`
-  height: 80px;
-  object-fit: cover;
+  width: 100px;
+  height: 100px;
+  background: #181818;
   border-radius: 12px;
-  flex-shrink: 0;
-  
-  @media (max-width: 768px) {
-    width: 100%;
-    height: 120px;
-    max-width: 200px;
-    align-self: center;
-  }
+  object-fit: cover;
 `
-
-const ItemDetails = styled.div`
+const NameRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`
+const ItemInfo = styled.div`
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
-  
-  @media (max-width: 768px) {
-    width: 100%;
-  }
 `
 
-const ItemName = styled.h3`
+const ItemName = styled.div`
   font-size: 16px;
   font-weight: bold;
-  margin: 0 0 4px 0;
-  color: white;
-  
-  @media (max-width: 768px) {
-    font-size: 14px;
-    text-align: center;
-  }
+  color: #fff;
+  margin-top: 2px;
 `
 
 const ItemCustomizations = styled.div`
@@ -199,11 +201,6 @@ const ItemCustomizations = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   margin: 4px 0;
-  
-  @media (max-width: 768px) {
-    justify-content: center;
-    gap: 4px;
-  }
 `
 
 const Customization = styled.span`
@@ -212,102 +209,108 @@ const Customization = styled.span`
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
-  
-  @media (max-width: 768px) {
-    font-size: 10px;
-    padding: 1px 4px;
-  }
 `
 
-const ItemPrice = styled.div`
-  color: #999;
-  font-size: 14px;
-  margin-top: 4px;
-  
-  @media (max-width: 768px) {
-    text-align: center;
-    font-size: 12px;
-  }
-`
-
-const QuantityControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #222;
-  border-radius: 8px;
-  padding: 4px;
-  
-  @media (max-width: 768px) {
-    align-self: center;
-    margin: 8px 0;
-  }
-`
-
-const QuantityButton = styled.button`
-  background: #333;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
+const ItemTotal = styled.div`
   font-weight: bold;
+  color: #ff9800;
+  font-size: 18px;
+  margin-top: 6px;
+`
 
+const Actions = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between; /* push delete to top, quantity to bottom */
+  gap: 12px;
+  align-self: stretch; /* stretch to full height of CartItem */
+`
+
+const QuantityControl = styled.div`
+  display: flex;
+  align-items: center;
+  background: #181818;
+  border-radius: 12px;
+  padding: 2px 6px;
+  gap: 2px;
+`
+
+const QtyButton = styled.button`
+  background: #222;
+  border: none;
+  color: #ff9800;
+  font-size: 22px;
+  font-weight: bold;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
   &:hover:not(:disabled) {
     background: #ff9800;
+    color: #222;
   }
-
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 `
 
-const QuantityDisplay = styled.span`
+const QtyDisplay = styled.div`
+  background: #222;
+  color: #fff;
+  font-size: 20px;
   font-weight: bold;
-  min-width: 24px;
-  text-align: center;
-`
-
-const ItemTotal = styled.div`
-  font-weight: bold;
-  color: #ff9800;
-  font-size: 16px;
-  min-width: 60px;
-  text-align: right;
-  
-  @media (max-width: 768px) {
-    align-self: center;
-    font-size: 14px;
-    min-width: auto;
-  }
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
 `
 
 const DeleteButton = styled.button`
   background: #e74c3c;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 8px;
-  height: 36px;
+  height: 30px;
+  width: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
-
   &:hover {
-    background: #c0392b;
+    background: #ff9800;
+    color: #222;
   }
-  
-  @media (max-width: 768px) {
-    align-self: center;
-    width: 32px;
-    height: 32px;
+  svg {
+    font-size: 28px;
+  }
+`
+const ShowMoreWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+`
+
+const ShowMoreButton = styled.button`
+  background: linear-gradient(135deg, #0b0b0b 0%, #1a1a1a 100%);
+  color: #ff9800;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: linear-gradient(135deg, #111111 0%, #222222 100%);
+    border-color: #ff9800;
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.15);
   }
 `
