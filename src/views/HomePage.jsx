@@ -367,8 +367,6 @@ function HomePage() {
                 searchQuery={searchQuery}
                 onCategoryClick={handleSubCategoryClick}
                 skeletonCount={3}
-                notFoundTitle="No subcategories"
-                notFoundMessage="No subcategories found."
               />
             </TransitionContainer>
 

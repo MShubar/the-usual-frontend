@@ -19,7 +19,7 @@ import { cacheManager } from '../utils/cache'
 
 function Checkout() {
   const [cartItems, setCartItems] = useState([])
-  const [orderType, setOrderType] = useState('delivery') 
+  const [orderType, setOrderType] = useState(orderTypeOptions[0].value) 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [hasPendingOrder, setHasPendingOrder] = useState(false)
   const [phone, setPhone] = useState(() => {
@@ -385,6 +385,7 @@ function Checkout() {
 export default Checkout
 
 const PageContainer = styled.div`
+  font-family: "Rubik", sans-serif;
   background: #000;
   color: white;
   min-height: 100vh;
@@ -392,7 +393,7 @@ const PageContainer = styled.div`
   width: 100%;
   position: relative;
   padding-bottom: 10px;
-`
+`;
 
 const Content = styled.div`
   padding: 0 16px;

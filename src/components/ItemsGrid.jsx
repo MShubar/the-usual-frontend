@@ -93,6 +93,7 @@ export default ItemsGrid
 
 const Title = styled.h1`
   color: white;
+  font-family: 'Rubik', sans-serif;
   margin: 16px;
 `
 

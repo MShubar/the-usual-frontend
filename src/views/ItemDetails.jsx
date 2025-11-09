@@ -13,6 +13,7 @@ import ThreeShotImg from '../assets/options/ThreeShot.svg'
 import TwoShotImg from '../assets/options/TwoShot.svg'
 import Sprite from '../assets/options/Sprite.svg'
 import Redbull from '../assets/options/Redbull.svg'
+import { colors } from '../constants/colors'
 
 const optionImages = {
   Almond: AlmondImg,
@@ -169,8 +170,9 @@ function ItemDetails() {
 export default ItemDetails
 
 const PageContainer = styled.div`
-  background: #000;
-  color: white;
+font-family: 'Rubik', sans-serif;
+  background: ${colors.background};
+  color: ${colors.textPrimary};
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -180,7 +182,7 @@ const ImageWrapper = styled.div`
   width: 100%;
   height: 300px;
   overflow: hidden;
-  background: #1a1a1a;
+  background: ${colors.backgroundCard};
   margin-top: 0;
   padding-top: env(safe-area-inset-top);
 
@@ -235,20 +237,20 @@ const Title = styled.h1`
 const Price = styled.div`
   font-size: 24px;
   font-weight: bold;
-  color: #ff9800;
+  color: ${colors.primary};
   white-space: nowrap;
   margin-left: 16px;
 `
 
 const Description = styled.p`
   font-size: 16px;
-  color: #999;
+  color: ${colors.textTertiary};
   margin: 0 0 24px 0;
   line-height: 1.5;
 `
 
 const NoOptions = styled.div`
-  color: #666;
+  color: ${colors.textDisabled};
   margin: 16px 0;
   font-style: italic;
 `
@@ -275,8 +277,8 @@ const OptionButton = styled.button`
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  background: ${({ $selected }) => ($selected ? '#1a1a1a' : '#2a2a2a')};
-  border: 2px solid ${({ $selected }) => ($selected ? '#ff9800' : '#555')};
+  background: ${({ $selected }) => ($selected ? colors.backgroundCard : colors.surfaceLight)};
+  border: 2px solid ${({ $selected }) => ($selected ? colors.primary : colors.border)};
   border-radius: 12px;
   padding: 8px 6px;
   width: 80px;
@@ -285,8 +287,8 @@ const OptionButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    border-color: #ff9800;
-    background: #1a1a1a;
+    border-color: ${colors.primary};
+    background: ${colors.backgroundCard};
   }
 `
 
@@ -303,7 +305,7 @@ const OptionImg = styled.img`
 `
 
 const OptionLabel = styled.div`
-  color: white;
+  color: ${colors.textPrimary};
   font-size: 13px;
   text-align: center;
   line-height: 1.2;
@@ -322,9 +324,9 @@ const QuantityContainer = styled.div`
 `
 
 const QuantityButton = styled.button`
-  background: #2a2a2a;
-  color: white;
-  border: 2px solid #ff9800;
+  background: ${colors.surfaceLight};
+  color: ${colors.textPrimary};
+  border: 2px solid ${colors.primary};
   border-radius: 8px;
   width: 44px;
   height: 44px;
@@ -336,21 +338,21 @@ const QuantityButton = styled.button`
   transition: all 0.2s;
   
   &:disabled {
-    background: #1a1a1a;
-    border-color: #555;
-    color: #666;
+    background: ${colors.backgroundCard};
+    border-color: ${colors.border};
+    color: ${colors.textDisabled};
     cursor: not-allowed;
   }
   
   &:not(:disabled):hover {
-    background: #ff9800;
-    color: #000;
+    background: ${colors.primary};
+    color: ${colors.background};
   }
 `
 
 const QuantityDisplay = styled.div`
-  background: #2a2a2a;
-  color: white;
+  background: ${colors.surfaceLight};
+  color: ${colors.textPrimary};
   border-radius: 8px;
   min-width: 60px;
   height: 44px;
@@ -363,8 +365,8 @@ const QuantityDisplay = styled.div`
 
 const AddButton = styled.button`
   width: 100%;
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-  color: white;
+  background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 100%);
+  color: ${colors.textPrimary};
   border: none;
   border-radius: 12px;
   padding: 18px;
@@ -377,7 +379,7 @@ const AddButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
+    box-shadow: 0 8px 25px ${colors.shadowOrange};
   }
 
   &:active {

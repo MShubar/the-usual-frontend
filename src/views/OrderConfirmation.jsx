@@ -114,6 +114,7 @@ const pulseGlow = keyframes`
 `
 
 const PageContainer = styled.div`
+font-family: 'Rubik', sans-serif;
   background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
   min-height: 100vh;
   display: flex;
@@ -179,7 +180,6 @@ const OrderNumber = styled.div`
   font-size: 36px;
   font-weight: bold;
   margin-bottom: 8px;
-  font-family: 'Courier New', monospace;
   
   @media (max-width: 768px) {
     font-size: 32px;

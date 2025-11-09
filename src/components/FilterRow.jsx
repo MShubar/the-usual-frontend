@@ -8,8 +8,6 @@ function FilterRow({
   loading = false, 
   activeId = null, 
   onCategorySelect,
-  notFoundTitle = "No categories",
-  notFoundMessage = "No categories available."
 }) {
   if (loading) {
     return (
@@ -19,13 +17,6 @@ function FilterRow({
     )
   }
 
-  if (categories.length === 0) {
-    return (
-      <Container>
-        <NotFound title={notFoundTitle} message={notFoundMessage} />
-      </Container>
-    )
-  }
 
   return (
     <Container>

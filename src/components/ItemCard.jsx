@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
+import { colors } from '../constants/colors'
 
 function ItemCard({ id, name, description, price, image, cat, options = {} }) {
   const navigate = useNavigate()
@@ -61,6 +62,7 @@ function ItemCard({ id, name, description, price, image, cat, options = {} }) {
 export default React.memo(ItemCard)
 
 const Card = styled.div`
+font-family: 'Rubik', sans-serif;
   border-radius: 12px;
   overflow: hidden;
   width: 100%;
@@ -88,7 +90,7 @@ const Card = styled.div`
 const ImagePlaceholder = styled.div`
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background: linear-gradient(90deg, ${colors.backgroundCard} 25%, ${colors.surfaceLight} 50%, ${colors.backgroundCard} 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 
@@ -101,7 +103,7 @@ const ImagePlaceholder = styled.div`
 const ImageContainer = styled.div`
   height: 200px;
   overflow: hidden;
-  background: #1a1a1a;
+  background: ${colors.backgroundCard};
   border-radius: 25px;
 
   .lazy-load-image-background {
@@ -119,7 +121,7 @@ const Content = styled.div`
 `
 
 const Title = styled.h3`
-  color: white;
+  color: ${colors.textPrimary};
   font-size: 1.2rem;
   font-weight: bold;
   margin: 0;
@@ -127,7 +129,7 @@ const Title = styled.h3`
 
 const Description = styled.p`
   font-size: 0.9rem;
-  color: grey;
+  color: ${colors.textSecondary};
   margin: 8px 0;
 `
 
@@ -142,6 +144,6 @@ const Price = styled.p`
 
 const Currency = styled.span`
   font-size: 16px;
-  color: white;
+  color: ${colors.textPrimary};
   font-family: 'rubik', sans-serif;
 `

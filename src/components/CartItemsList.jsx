@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import styled from 'styled-components'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ClearAllIcon from '@mui/icons-material/ClearAll'
+import { colors } from '../constants/colors'
 
 function CartItemsList({ 
   items = [], 
@@ -64,7 +65,6 @@ function CartItemsList({
               </QuantityControl>
             </Actions>
             </ItemInfo>
-            
           </CartItem>
         ))}
       </CartList>
@@ -83,7 +83,7 @@ function CartItemsList({
 export default CartItemsList
 
 const CartSection = styled.div`
-  background: #181818;
+  background: ${colors.backgroundCard};
   border-radius: 16px;
   padding: 16px;
     
@@ -109,7 +109,7 @@ const SectionTitle = styled.h2`
   font-size: 20px;
   font-weight: bold;
   margin: 0 0 16px 0;
-  color: #ff9800;
+  color: ${colors.primary};
   
   @media (max-width: 768px) {
     font-size: 18px;
@@ -121,9 +121,9 @@ const ClearAllButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #222;
-  color: #ff9800;
-  border: 1px solid #444;
+  background: ${colors.surface};
+  color: ${colors.primary};
+  border: 1px solid ${colors.border};
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -131,9 +131,9 @@ const ClearAllButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background: #333;
-    border-color: #ff9800;
-    color: #fff;
+    background: ${colors.surfaceLight};
+    border-color: ${colors.primary};
+    color: ${colors.textPrimary};
   }
   
   svg {
@@ -161,10 +161,10 @@ const CartList = styled.div`
 const CartItem = styled.div`
   display: flex;
   align-items: center;
-  background: #222;
+  background: ${colors.surface};
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 2px 8px #0004;
+  box-shadow: 0 2px 8px ${colors.shadowMedium};
   width: 90%; 
   gap: 16px;
 `
@@ -172,7 +172,7 @@ const CartItem = styled.div`
 const ItemImage = styled.img`
   width: 100px;
   height: 100px;
-  background: #181818;
+  background: ${colors.backgroundCard};
   border-radius: 12px;
   object-fit: cover;
 `
@@ -192,7 +192,7 @@ const ItemInfo = styled.div`
 const ItemName = styled.div`
   font-size: 16px;
   font-weight: bold;
-  color: #fff;
+  color: ${colors.textPrimary};
   margin-top: 2px;
 `
 
@@ -204,8 +204,8 @@ const ItemCustomizations = styled.div`
 `
 
 const Customization = styled.span`
-  background: #333;
-  color: #ff9800;
+  background: ${colors.surfaceLight};
+  color: ${colors.primary};
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
@@ -213,7 +213,7 @@ const Customization = styled.span`
 
 const ItemTotal = styled.div`
   font-weight: bold;
-  color: #ff9800;
+  color: ${colors.primary};
   font-size: 18px;
   margin-top: 6px;
 `
@@ -230,16 +230,16 @@ const Actions = styled.div`
 const QuantityControl = styled.div`
   display: flex;
   align-items: center;
-  background: #181818;
+  background: ${colors.backgroundCard};
   border-radius: 12px;
   padding: 2px 6px;
   gap: 2px;
 `
 
 const QtyButton = styled.button`
-  background: #222;
+  background: ${colors.surface};
   border: none;
-  color: #ff9800;
+  color: ${colors.primary};
   font-size: 22px;
   font-weight: bold;
   width: 26px;
@@ -248,8 +248,8 @@ const QtyButton = styled.button`
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   &:hover:not(:disabled) {
-    background: #ff9800;
-    color: #222;
+    background: ${colors.primary};
+    color: ${colors.surface};
   }
   &:disabled {
     opacity: 0.5;
@@ -258,8 +258,8 @@ const QtyButton = styled.button`
 `
 
 const QtyDisplay = styled.div`
-  background: #222;
-  color: #fff;
+  background: ${colors.surface};
+  color: ${colors.textPrimary};
   font-size: 20px;
   font-weight: bold;
   width: 26px;
@@ -272,8 +272,8 @@ const QtyDisplay = styled.div`
 `
 
 const DeleteButton = styled.button`
-  background: #e74c3c;
-  color: #fff;
+  background: ${colors.error};
+  color: ${colors.textPrimary};
   border: none;
   border-radius: 8px;
   height: 30px;
@@ -285,8 +285,8 @@ const DeleteButton = styled.button`
   transition: background 0.2s;
   flex-shrink: 0;
   &:hover {
-    background: #ff9800;
-    color: #222;
+    background: ${colors.primary};
+    color: ${colors.surface};
   }
   svg {
     font-size: 28px;
@@ -299,18 +299,18 @@ const ShowMoreWrapper = styled.div`
 `
 
 const ShowMoreButton = styled.button`
-  background: linear-gradient(135deg, #0b0b0b 0%, #1a1a1a 100%);
-  color: #ff9800;
-  border: 1px solid #333;
+  background: linear-gradient(135deg, ${colors.backgroundDark} 0%, ${colors.backgroundCard} 100%);
+  color: ${colors.primary};
+  border: 1px solid ${colors.border};
   border-radius: 12px;
   padding: 10px 16px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   &:hover {
-    background: linear-gradient(135deg, #111111 0%, #222222 100%);
-    border-color: #ff9800;
-    color: #ffffff;
-    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.15);
+    background: linear-gradient(135deg, ${colors.backgroundLight} 0%, ${colors.surface} 100%);
+    border-color: ${colors.primary};
+    color: ${colors.textPrimary};
+    box-shadow: 0 6px 20px ${colors.shadowOrange};
   }
 `

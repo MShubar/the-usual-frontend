@@ -231,7 +231,6 @@ const TextArea = styled.textarea`
   border-radius: 8px;
   font-size: 16px;
   resize: vertical;
-  font-family: inherit;
   &:focus { outline: none; border-color: #ff9800; }
   &::placeholder { color: #666; }
 `
