@@ -9,8 +9,6 @@ function CategoryGrid({
   searchQuery = '',
   onCategoryClick,
   skeletonCount = 3,
-  notFoundTitle = "No subcategories",
-  notFoundMessage = "No subcategories found."
 }) {
   if (loading) {
     return (
@@ -23,14 +21,6 @@ function CategoryGrid({
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  if (filteredCategories.length === 0) {
-    return (
-      <CardList>
-        <NotFound title={notFoundTitle} message={notFoundMessage} />
-      </CardList>
-    )
-  }
 
   return (
     <CardList>
