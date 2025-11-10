@@ -184,7 +184,7 @@ function Checkout() {
       }
       
       let formattedPhone = phone.trim()
-      // Remove + to avoid URL encoding issues in Azure
+      // Remove + to avoid URL encoding issues
       if (formattedPhone.startsWith('+')) {
         formattedPhone = formattedPhone.substring(1)
       }
@@ -194,7 +194,7 @@ function Checkout() {
       }
 
       try {
-        localStorage.setItem('userPhone', phone)
+        localStorage.setItem('userPhone', phone) // Keep original for display
         localStorage.setItem('userId', formattedPhone) // Store without +
       } catch (error) {
         console.error('Error saving user info:', error)
@@ -211,7 +211,7 @@ function Checkout() {
           total: total,
           paymentMethod: 'cash',
           deliveryAddress: null,
-          userId: formattedPhone, // Use formatted phone without +
+          userId: formattedPhone, // Use without +
           items: cartItems.map(item => ({
             id: item.id,
             name: item.name || `Item #${item.id}`,
