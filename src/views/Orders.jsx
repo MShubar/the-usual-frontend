@@ -80,7 +80,8 @@ function Orders() {
     // Fetch from API with userId (skip cache for real-time updates)
     // const startTime = performance.now()
     try {
-      const response = await fetch(`${API_BACKEND}/orders/user/${encodeURIComponent(userId)}`, {
+      // Use query parameter instead of path variable for better special character handling
+      const response = await fetch(`${API_BACKEND}/orders/user?userId=${encodeURIComponent(userId)}`, {
         cache: 'no-cache' // Disable browser cache
       })
       if (!response.ok) {
