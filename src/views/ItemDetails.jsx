@@ -170,13 +170,13 @@ function ItemDetails() {
 export default ItemDetails
 
 const PageContainer = styled.div`
-font-family: 'Rubik', sans-serif;
+  font-family: "Rubik", sans-serif;
   background: ${colors.background};
   color: ${colors.textPrimary};
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-`
+`;
 
 const ImageWrapper = styled.div`
   width: 100%;

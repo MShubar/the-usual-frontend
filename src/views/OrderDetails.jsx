@@ -54,7 +54,7 @@ function OrderDetails() {
     { id: 'cash', name: 'Cash on Delivery', icon: LocalAtmIcon }
   ]
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = () => {
     if (orderType === 'delivery' && !savedAddress) {
       alert('Please select a delivery address')
       return
@@ -66,22 +66,6 @@ function OrderDetails() {
       return
     }
     
-    let formattedPhone = phone.trim()
-    // Remove + to avoid Azure issues
-    if (formattedPhone.startsWith('+')) {
-      formattedPhone = formattedPhone.substring(1)
-    }
-    if (!formattedPhone.startsWith('973')) {
-      formattedPhone = '973' + formattedPhone
-    }
-
-    try {
-      localStorage.setItem('userPhone', phone)
-      localStorage.setItem('userId', formattedPhone)
-    } catch (error) {
-      console.error('Error saving user info:', error)
-    }
-
     proceedWithOrder()
   }
 
@@ -130,12 +114,8 @@ function OrderDetails() {
     
     try {
       let formattedPhone = phone.trim()
-      // Remove + to avoid Azure issues
-      if (formattedPhone.startsWith('+')) {
-        formattedPhone = formattedPhone.substring(1)
-      }
-      if (!formattedPhone.startsWith('973')) {
-        formattedPhone = '973' + formattedPhone
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+973' + formattedPhone
       }
 
       const orderData = {
@@ -143,7 +123,7 @@ function OrderDetails() {
         total: total,
         paymentMethod: paymentMethod,
         deliveryAddress: orderType === 'delivery' ? savedAddress : null,
-        userId: formattedPhone, // Use without +
+        userId: formattedPhone,
         items: cartItems.map(item => ({
           id: item.id,
           name: item.name || `Item #${item.id}`,

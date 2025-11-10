@@ -114,7 +114,7 @@ const pulseGlow = keyframes`
 `
 
 const PageContainer = styled.div`
-font-family: 'Rubik', sans-serif;
+  font-family: "Rubik", sans-serif;
   background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
   min-height: 100vh;
   display: flex;
@@ -122,7 +122,7 @@ font-family: 'Rubik', sans-serif;
   align-items: center;
   padding: 20px;
   color: white;
-`
+`;
 
 const ContentWrapper = styled.div`
   max-width: 500px;

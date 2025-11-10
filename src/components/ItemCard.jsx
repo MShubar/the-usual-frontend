@@ -62,7 +62,7 @@ function ItemCard({ id, name, description, price, image, cat, options = {} }) {
 export default React.memo(ItemCard)
 
 const Card = styled.div`
-font-family: 'Rubik', sans-serif;
+  font-family: "Rubik", sans-serif;
   border-radius: 12px;
   overflow: hidden;
   width: 100%;
@@ -85,7 +85,7 @@ font-family: 'Rubik', sans-serif;
   @media (min-width: 1200px) {
     width: calc(25% - 20px);
   }
-`
+`;
 
 const ImagePlaceholder = styled.div`
   width: 100%;
