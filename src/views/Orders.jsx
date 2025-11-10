@@ -77,21 +77,22 @@ function Orders() {
 
     const cacheKey = `orders_${userId}`
 
-    // Fetch from API with userId (skip cache for real-time updates)
-    // const startTime = performance.now()
     try {
-      // Use query parameter instead of path variable for better special character handling
-      const response = await fetch(`${API_BACKEND}/orders/user?userId=${encodeURIComponent(userId)}`, {
-        cache: 'no-cache' // Disable browser cache
+      // Use POST endpoint with JSON body (most reliable for special characters)
+      const response = await fetch(`${API_BACKEND}/orders/user/fetch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: userId }),
+        cache: 'no-cache'
       })
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      // const duration = performance.now() - startTime
       
-      
-      // Update cache with fresh data
       cacheManager.set(cacheKey, data)
       setOrders(data)
     } catch (err) {
@@ -99,7 +100,6 @@ function Orders() {
       if (!isPolling) {
         setError(err.message || 'Failed to load orders')
       }
-      // On error during polling, try to use cached data
       if (isPolling) {
         const cached = cacheManager.get(cacheKey)
         if (cached) {

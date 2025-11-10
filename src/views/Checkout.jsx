@@ -184,24 +184,24 @@ function Checkout() {
       }
       
       let formattedPhone = phone.trim()
-      // Remove + before saving to avoid URL encoding issues
+      // Remove + to avoid URL encoding issues in Azure
       if (formattedPhone.startsWith('+')) {
         formattedPhone = formattedPhone.substring(1)
       }
-      // Store without +, add country code if needed
-      const userIdFormatted = formattedPhone.startsWith('973') ? formattedPhone : '973' + formattedPhone
+      // Ensure it starts with 973
+      if (!formattedPhone.startsWith('973')) {
+        formattedPhone = '973' + formattedPhone
+      }
 
-      // Save phone and userId to localStorage
       try {
         localStorage.setItem('userPhone', phone)
-        localStorage.setItem('userId', userIdFormatted)
+        localStorage.setItem('userId', formattedPhone) // Store without +
       } catch (error) {
         console.error('Error saving user info:', error)
       }
 
-      // Set userId to fetch orders for this phone number
       if (!userId) {
-        setUserId(userIdFormatted)
+        setUserId(formattedPhone)
       }
 
       setIsPlacingOrder(true)
@@ -211,7 +211,7 @@ function Checkout() {
           total: total,
           paymentMethod: 'cash',
           deliveryAddress: null,
-          userId: userIdFormatted, // Use formatted userId without +
+          userId: formattedPhone, // Use formatted phone without +
           items: cartItems.map(item => ({
             id: item.id,
             name: item.name || `Item #${item.id}`,
@@ -231,7 +231,7 @@ function Checkout() {
         const orderResponse = await createOrder(orderData)
         
         // Invalidate orders cache so it refreshes
-        const cacheKey = `orders_${userIdFormatted}`
+        const cacheKey = `orders_${formattedPhone}`
         cacheManager.remove(cacheKey)
         
         localStorage.removeItem('cart')
