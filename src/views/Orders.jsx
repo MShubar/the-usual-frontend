@@ -78,8 +78,8 @@ function Orders() {
     const cacheKey = `orders_${userId}`
 
     try {
-      // Use POST endpoint with JSON body (most reliable for special characters)
-      const response = await fetch(`${API_BACKEND}/orders/user/fetch`, {
+      // Use simpler endpoint path
+      const response = await fetch(`${API_BACKEND}/orders/by-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
