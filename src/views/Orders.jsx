@@ -78,8 +78,7 @@ function Orders() {
     const cacheKey = `orders_${userId}`
 
     try {
-      // Use simpler root-level API endpoint
-      const response = await fetch(`${API_BACKEND}/api/user-orders`, {
+      const response = await fetch(`${API_BACKEND}/api/fetch-orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
